@@ -1,0 +1,59 @@
+# Güvenlik ve Geçici Dosyalar
+# -----------------------------
+# İçinde API anahtarı olduğu için bu tek seferlik kontrol dosyasını görmezden gel.
+/ai-server/check_models.py
+
+# Log dosyaları
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE ve İşletim Sistemi Ayar Dosyaları
+# -----------------------------------
+.idea/
+.vscode/
+*.iml
+*.iws
+.project
+.classpath
+.settings/
+.DS_Store
+
+# Java & Maven
+# --------------
+# Maven'in derleme çıktıları. En önemlisi bu.
+/plain/target/
+
+# Maven wrapper'ın geçici dosyaları
+/plain/.mvn/
+
+# Maven'in oluşturduğu diğer geçici dosyalar
+/plain/pom.xml.tag
+/plain/pom.xml.releaseBackup
+/plain/pom.xml.versionsBackup
+
+# Python
+# --------
+# Python'un derlenmiş bytecode dosyaları
+/ai-server/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Sanal ortam klasörleri. Asla commit'lenmemeli.
+/ai-server/venv/
+/ai-server/env/
+/ai-server/.venv/
+
+# Node.js & React
+# -----------------
+# Tüm bağımlılıkların bulunduğu devasa klasör. En önemlisi bu.
+/frontend/node_modules/
+
+# React uygulamasının üretim (production) çıktısı
+/frontend/build/
+
+# Yarn paket yöneticisi dosyaları
+/frontend/.pnp
+/frontend/.pnp.js

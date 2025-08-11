@@ -1,0 +1,690 @@
+/* ======================================================= */
+/* ODA STİLLERİ (ROOM.JS)                                  */
+/* ======================================================= */
+
+.room-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 1200px;
+  gap: 20px;
+  text-align: left;
+}
+
+/* --- Yan Panel --- */
+.side-panel {
+  flex: 0 0 280px;
+  background-color: var(--bg-color-light);
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-panel ul {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.side-panel li {
+  background-color: var(--panel-color);
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-panel .vote-check {
+  color: var(--success-color);
+  font-weight: bold;
+}
+
+.side-panel .vote-value {
+  background-color: var(--primary-color);
+  color: var(--text-color-dark);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+/* --- Ana Panel --- */
+.main-panel {
+  flex: 1;
+  background-color: transparent;
+  padding: 0;
+}
+
+.task-display {
+  background-color: var(--panel-color);
+  padding: 25px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.task-display h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+/* ======================================================= */
+/* OYLAMA SONUÇLARI                                        */
+/* ======================================================= */
+
+.results-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.consensus-card {
+  background-color: var(--primary-color);
+  color: var(--text-color-dark);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  min-width: 150px;
+}
+
+.consensus-label {
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.consensus-value {
+  font-size: 3.5em;
+  font-weight: bold;
+}
+
+.results-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.result-card {
+  background-color: var(--panel-color);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.vote-value-big {
+  font-size: 2em;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.voter-name {
+  font-size: 0.8em;
+  color: var(--text-color-muted);
+  margin-top: 5px;
+}
+
+/* === GEÇMİŞ OYLAMALAR BÖLÜMÜ === */
+.task-history-section {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: var(--panel-color);
+  border-radius: 10px;
+}
+
+.task-history-section h3 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.task-history-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+.task-history-card {
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-history-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.task-history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.task-history-card-title {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--text-color);
+  margin-right: 15px;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-history-card-score {
+  font-size: 1.1rem;
+  font-weight: bold;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  min-width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.task-history-card-footer {
+  font-size: 0.8rem;
+  color: var(--text-color-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  width: 100%;
+}
+/* === MODAL İÇİ GÖREV DETAY STİLLERİ === */
+
+.task-detail-modal {
+  text-align: left;
+}
+
+.task-detail-modal h2 {
+  font-size: 1.8rem;
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.task-detail-description {
+  font-size: 1rem;
+  color: var(--text-color-muted);
+  margin-bottom: 30px;
+  border-left: 3px solid var(--border-color);
+  padding-left: 15px;
+}
+
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr; 
+  gap: 30px; 
+  align-items: start; 
+}
+
+.task-detail-consensus h4,
+.task-detail-votes h4 {
+  font-size: 1rem;
+  color: var(--text-color);
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-transform: uppercase; 
+  letter-spacing: 1px; 
+}
+
+/* Karar Oyu Kutusu */
+.task-detail-score {
+  background-color: var(--primary-color);
+  color: white;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  font-weight: bold;
+}
+
+/* Verilen Oylar Listesi */
+.task-detail-votes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.task-detail-votes li {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.task-detail-votes li:last-child {
+  border-bottom: none; 
+}
+
+.task-detail-votes .voter-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.task-detail-votes .vote-value {
+  font-weight: bold;
+  background-color: var(--bg-color-light);
+  padding: 4px 10px;
+  border-radius: 15px;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* === GÖREV LİSTESİ VE SEKMELER (YENİ) === */
+.task-list-section {
+  margin-top: 40px;
+  /* Arka planı, ana panelin arka planıyla aynı yapalım */
+}
+
+/* Sekme Butonları */
+.task-list-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.task-list-tabs button {
+  background: none;
+  border: none;
+  padding: 15px 20px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-color-muted);
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.task-list-tabs button:hover {
+  color: var(--text-color);
+}
+
+.task-list-tabs button.active {
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+/* Aktif sekmenin altındaki o şık çizgi */
+.task-list-tabs button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Ana border'ın üzerine gelsin */
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary-color);
+}
+
+.task-list-content {
+  /* İçerik buraya gelecek */
+}
+
+/* "Hazır Olanlar" Kartları */
+.pending-task-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.pending-task-card:hover {
+  border-color: var(--primary-color);
+  background-color: var(--panel-hover-color);
+}
+
+.pending-task-card span {
+  font-weight: 500;
+}
+
+.start-voting-btn {
+  background: none;
+  border: 1px solid var(--success-color);
+  color: var(--success-color);
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.start-voting-btn:hover {
+  background-color: var(--success-color);
+  color: white;
+}
+/* === ODA BAŞLIĞI VE LİNK KOPYALAMA (YENİ) === */
+.room-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.room-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.room-invite-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--text-color-muted);
+}
+
+.copy-link-btn {
+  background: none;
+  border: none;
+  color: var(--text-color-muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative; /* Bildirim için gerekli */
+}
+
+.copy-link-btn:hover {
+  background-color: var(--panel-hover-color);
+  color: var(--primary-color);
+}
+
+/* "Kopyalandı!" bildirimi için stil */
+.copy-tooltip {
+  position: absolute;
+  bottom: 120%; /* Butonun üstünde görünmesini sağlar */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--success-color);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
+  z-index: 10;
+}
+/* ======================================================= */
+/* AI GEREKÇE KUTUSU (YENİ)                                */
+/* ======================================================= */
+
+.ai-reasoning-box {
+  width: 100%;
+  max-width: 600px; /* Çok fazla genişlemesini önle */
+  margin-top: 30px; /* Üstündeki ızgaradan boşluk bırak */
+  padding: 20px;
+  background-color: var(--panel-color);
+  border-left: 4px solid var(--primary-color);
+  border-radius: 0 8px 8px 0;
+  text-align: left;
+}
+
+.ai-reasoning-box h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--text-color);
+  font-size: 1.1rem;
+}
+
+.ai-reasoning-box p {
+  margin: 0;
+  color: var(--text-color-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+/* ======================================================= */
+/* GENEL KULLANIMLI AI TOOLTIP STİLLERİ                    */
+/* ======================================================= */
+
+.vote-value-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-reasoning-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ai-reasoning-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-color-muted);
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.ai-reasoning-container:hover .ai-reasoning-icon {
+  color: var(--primary-color);
+}
+
+.ai-reasoning-tooltip {
+  position: absolute;
+  bottom: 130%;
+  right: 0;
+  background-color: var(--panel-color);
+  color: var(--text-color);
+  padding: 12px 15px;
+  border-radius: 6px;
+  min-width: 250px;
+  max-width: 300px;
+  white-space: normal;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 1000; /* Modal'ın üzerinde görünmesi için z-index'i yüksek tutalım */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ai-reasoning-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 5px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--panel-color) transparent transparent transparent;
+}
+
+.ai-reasoning-container:hover .ai-reasoning-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+.voter-info-container {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* İsim ile ikon arasındaki boşluk */
+}
+/* ======================================================= */
+/* KATILIMCI LİSTESİ VE AVATAR STİLLERİ (NİHAİ VERSİYON)    */
+/* ======================================================= */
+
+/* 'li' elementini flex container yapalım ki içerikler düzgün hizalansın */
+.side-panel li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  /* padding-left'i sıfırlıyoruz çünkü avatar container'ı kullanacağız */
+  padding-left: 15px; 
+}
+
+/* Avatar ve ismi sola, oy durumunu sağa yaslamak için */
+.participant-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1; /* Bu sol tarafın genişlemesini sağlar */
+  overflow: hidden; /* İsim taşarsa gizle */
+}
+
+.participant-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Avatar ve üzerindeki atma butonunu saran container */
+.participant-avatar-container {
+  position: relative; /* Butonun konumlandırılması için */
+  flex-shrink: 0; /* Avatarın bozulmasını/küçülmesini engelle */
+}
+
+.participant-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  display: block; /* Altındaki gereksiz boşluğu kaldırır */
+}
+
+/* Oy durumu (tik veya puan) için sağ taraf */
+.participant-vote-status {
+  flex-shrink: 0; /* Küçülmesin */
+}
+
+/* Kullanıcı atma butonu */
+.kick-user-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background-color: var(--danger-color, #e74c3c);
+  color: white;
+  border: 2px solid var(--bg-color-light); /* Arka plan rengiyle uyumlu çerçeve */
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.5);
+  transition: all 0.2s ease-in-out;
+  z-index: 10;
+}
+
+/* Sadece moderatör, 'li' elemanının (tüm satırın) üzerine geldiğinde butonu göster */
+.side-panel li:hover .kick-user-btn {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.kick-user-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+
+/* ======================================================= */
+/* KULLANICI ATMA ONAY MODALI (YENİ)                         */
+/* ======================================================= */
+
+.kick-confirm-modal {
+  text-align: center;
+  padding: 10px;
+}
+
+.kick-confirm-modal h3 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  color: var(--text-color);
+}
+
+.kick-confirm-modal p {
+  margin: 20px 0 30px;
+  line-height: 1.6;
+  color: var(--text-color-muted);
+}
+
+.kick-confirm-modal p strong {
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.modal-button {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-button.secondary {
+  background-color: var(--panel-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+.modal-button.secondary:hover {
+  background-color: var(--panel-hover-color);
+}
+
+.modal-button.danger {
+  background-color: var(--danger-color, #e74c3c);
+  color: white;
+}
+.modal-button.danger:hover {
+  opacity: 0.85;
+}
+/* ============================================= */
+/* MODERATÖR AVATAR ÇERÇEVESİ (YENİ)            */
+/* ============================================= */
+
+.participant-avatar.moderator {
+  /* Çerçevenin rengini belirliyoruz */
+  border-color: #FFD700; 
+  
+  /* YENİ: Gölgeyi, resmin yuvarlak şeklini takip edecek şekilde uyguluyoruz */
+}

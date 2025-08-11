@@ -1,0 +1,149 @@
+/* ======================================================= */
+/* TEMEL UYGULAMA STİLLERİ                               */
+/* ======================================================= */
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: var(--bg-color-light);
+  padding: 20px;
+  color: var(--text-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  position: relative;
+}
+
+.app-content {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 121px); 
+  background-color: var(--bg-color);
+}
+
+/* ======================================================= */
+/* FORM ELEMANLARI (TaskForm, AuthForm vb.)              */
+/* ======================================================= */
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background-color: var(--panel-color);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.task-form input,
+.task-form textarea,
+.task-form select {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color-light);
+  color: var(--text-color);
+  font-size: 1em;
+  font-family: inherit; /* index.css'teki fontu kullan */
+}
+
+.task-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ======================================================= */
+/* BUTONLAR                                                */
+/* ======================================================= */
+
+.reveal-button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--success-color);
+  color: white;
+  font-weight: bold;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reveal-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.reveal-button:disabled {
+  background-color: var(--panel-color);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+}
+
+.side-panel-button {
+  margin-top: 10px;
+}
+
+.new-task-button {
+  background-color: var(--secondary-color);
+  margin-top: auto; 
+  padding-top: 15px; 
+}
+
+
+/* ======================================================= */
+/* KART SEÇİMİ (TaskForm)                                  */
+/* ======================================================= */
+
+.card-set-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-set-selector label {
+  font-size: 0.9em;
+  color: var(--text-color-muted);
+}
+
+.customize-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background-color: var(--bg-color-light);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.card-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--panel-color);
+  padding: 5px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.card-checkbox-item:hover {
+  background-color: var(--panel-hover-color);
+}
+
+.task-form button {
+  padding: 12px 15px;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--primary-color);
+  color: var(--text-color-dark);
+  font-weight: bold;
+  font-size: 1em;
+  cursor: pointer;
+  margin-top: 10px; 
+  transition: background-color 0.2s ease;
+}
+
+.task-form button:hover {
+  background-color: var(--primary-color-hover);
+}

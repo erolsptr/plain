@@ -1,0 +1,68 @@
+.home-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.hero-section {
+  max-width: 700px;
+}
+
+.hero-section h1 {
+  font-size: 3.5rem;
+  color: #61dafb; /* React mavisi */
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  color: #f0f0f0;
+  margin-bottom: 25px;
+}
+
+.description {
+  font-size: 1.1rem;
+  color: #ccc;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #61dafb;
+  color: #282c34;
+}
+
+.btn-primary:hover {
+  background-color: #88eaff;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #61dafb;
+  border: 2px solid #61dafb;
+}
+
+.btn-secondary:hover {
+  background-color: #61dafb;
+  color: #282c34;
+  transform: translateY(-2px);
+}

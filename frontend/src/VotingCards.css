@@ -1,0 +1,40 @@
+.voting-cards-container {
+  margin-top: 20px;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 10px; 
+  justify-content: center; 
+  margin-top: 15px;
+}
+
+.vote-card {
+  width: 60px;
+  height: 90px;
+  border: 2px solid #61dafb;
+  border-radius: 8px;
+  background-color: #2c313a;
+  color: #61dafb;
+  font-size: 1.5em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.vote-card:hover:not(:disabled) {
+  background-color: #61dafb;
+  color: #282c34;
+  transform: translateY(-5px); 
+}
+
+.vote-card:disabled {
+  border-color: #555;
+  color: #555;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
