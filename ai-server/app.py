@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # ÖNEMLİ GÜVENLİK UYARISI: Bu API anahtarını GitHub gibi halka açık yerlerde paylaşma.
 # Gerçek bir uygulamada, bunu bir ortam değişkeni (environment variable) olarak ayarlamak en iyisidir.
-GOOGLE_API_KEY = "dikkat"
+GOOGLE_API_KEY = "key"
 genai.configure(api_key=GOOGLE_API_KEY)
 
 JAVA_API_CALLBACK_URL = "http://localhost:8080/api/internal/ai-vote"

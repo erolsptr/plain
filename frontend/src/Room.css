@@ -688,3 +688,47 @@
   
   /* YENİ: Gölgeyi, resmin yuvarlak şeklini takip edecek şekilde uyguluyoruz */
 }
+/* ======================================================= */
+/* AKTİF DURUM GÖSTERGESİ (YENİ)                            */
+/* ======================================================= */
+
+.status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-color-light); /* Arka planla uyumlu çerçeve */
+  z-index: 15; /* Atma butonunun bile üzerinde olsun */
+}
+
+.status-indicator.active {
+  background-color: var(--success-color, #2ecc71); /* Yeşil */
+}
+
+.status-indicator.inactive {
+  background-color: #7f8c8d; /* Gri */
+}
+/* ======================================================= */
+/* AKTİF DURUM GÖSTERGESİ (YENİ)                            */
+/* ======================================================= */
+
+.status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-color-light); /* Arka planla uyumlu çerçeve */
+  z-index: 15; /* Atma butonunun bile üzerinde olsun */
+}
+
+.status-indicator.active {
+  background-color: var(--success-color, #2ecc71); /* Yeşil */
+}
+
+.status-indicator.inactive {
+  background-color: #7f8c8d; /* Gri */
+}

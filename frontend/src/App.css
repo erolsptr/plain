@@ -147,3 +147,11 @@
 .task-form button:hover {
   background-color: var(--primary-color-hover);
 }
+.auth-info-message {
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  background-color: rgba(46, 204, 113, 0.15); /* Yeşil tonu */
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}

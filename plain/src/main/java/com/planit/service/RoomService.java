@@ -57,6 +57,7 @@ public class RoomService {
     private final Map<String, Map<String, String>> roomVotes = new ConcurrentHashMap<>();
     private final Map<String, String> roomOwners = new ConcurrentHashMap<>();
     private final Map<String, String> aiReasonings = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> activeUsersByRoom = new ConcurrentHashMap<>();
 
     @Transactional
     public void addUserToRoom(String roomId, String username) {
@@ -73,7 +74,10 @@ public class RoomService {
                 });
             }
         }
+        
         rooms.computeIfAbsent(roomId, k -> new HashSet<>()).add(username);
+        activeUsersByRoom.computeIfAbsent(roomId, k -> new HashSet<>()).add(username);
+
         PokerRoom room = pokerRoomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Kullanıcı eklenecek oda bulunamadı: " + roomId));
         User userToJoin = userRepository.findByName(username)
@@ -85,49 +89,69 @@ public class RoomService {
     
     @Transactional
     public void kickUserFromRoom(String roomId, String usernameToKick) {
+        // Hem genel hem de aktif listelerden sil
         Set<String> participantsInMemory = rooms.get(roomId);
         if (participantsInMemory != null) {
             participantsInMemory.remove(usernameToKick);
         }
+        Set<String> activeParticipants = activeUsersByRoom.get(roomId);
+        if (activeParticipants != null) {
+            activeParticipants.remove(usernameToKick);
+        }
+
         Map<String, String> votesInMemory = roomVotes.get(roomId);
         if (votesInMemory != null) {
             votesInMemory.remove(usernameToKick);
         }
+
         PokerRoom room = pokerRoomRepository.findById(roomId)
             .orElseThrow(() -> new RuntimeException("Kullanıcı atılacak oda bulunamadı: " + roomId));
         User userToKick = userRepository.findByName(usernameToKick)
             .orElseThrow(() -> new RuntimeException("Atılacak kullanıcı bulunamadı: " + usernameToKick));
+            
         room.removeParticipant(userToKick);
         pokerRoomRepository.save(room);
     }
 
-    public void removeUserFromRoom(String roomId, String username) { /* ... aynı ... */ }
+    public void removeUserFromRoom(String roomId, String username) {
+        logger.info("'{}' kullanıcısı {} odasından ayrıldı (bağlantı koptu).", username, roomId);
+        Set<String> activeParticipants = activeUsersByRoom.get(roomId);
+        if (activeParticipants != null) {
+            activeParticipants.remove(username);
+        }
+        
+        Map<String, String> votesInMemory = roomVotes.get(roomId);
+        if (votesInMemory != null) {
+            votesInMemory.remove(username);
+        }
+    }
 
-    // Bu metod geçiş sürecinde hala gerekli, bu yüzden geri ekliyoruz
     public Set<String> getUsersInRoom(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
 
-    // Bu yeni metod, avatar bilgilerini de içeren haritayı döndürür
+    public Set<String> getActiveParticipants(String roomId) {
+        // AI her zaman aktif kabul edilir
+        Set<String> active = new HashSet<>(activeUsersByRoom.getOrDefault(roomId, Collections.emptySet()));
+        active.add(AI_PARTICIPANT_NAME);
+        return active;
+    }
+
     @Transactional
     public Map<String, String> getParticipantsWithAvatars(String roomId) {
         Set<String> participantNames = rooms.getOrDefault(roomId, Collections.emptySet());
         if (participantNames.isEmpty()) {
             return Collections.emptyMap();
         }
-        
         Set<String> humanNames = participantNames.stream()
                 .filter(name -> !name.equals(AI_PARTICIPANT_NAME))
                 .collect(Collectors.toSet());
-
         Map<String, String> participantsMap = new HashMap<>();
         if (!humanNames.isEmpty()) {
              participantsMap = userRepository.findByNameIn(humanNames).stream()
                 .collect(Collectors.toMap(User::getName, User::getAvatarId));
         }
-
         participantsMap.put(AI_PARTICIPANT_NAME, "bot");
-
         return participantsMap;
     }
 
@@ -258,6 +282,7 @@ public class RoomService {
         }
         pokerRoomRepository.deleteById(roomId);
         rooms.remove(roomId);
+        activeUsersByRoom.remove(roomId);
         activeTasks.remove(roomId);
         roomVotes.remove(roomId);
         roomOwners.remove(roomId);

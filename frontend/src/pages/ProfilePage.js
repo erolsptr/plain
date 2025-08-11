@@ -2,28 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ProfilePage.css';
 
-// DEĞİŞİKLİK: .png uzantıları kaldırıldı
 const AVATAR_IDS = [
-  'cat', 'chicken', 'dog',
-  'duck', 'gorilla', 'hippopotamus',
-  'panda', 'rabbit', 'shark',
+  'cat', 'chicken', 'dog', 'duck', 'gorilla', 'hippopotamus',
+  'panda', 'rabbit', 'shark', 'bot', 'default-avatar'
 ];
 
-function ProfilePage({ user, onUserUpdate }) {
-  const [profile, setProfile] = useState(null);
-  // DEĞİŞİKLİK: Varsayılan değer de uzantısız
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'default-avatar');
+function ProfilePage({ user, onUserUpdate, onLogout }) {
+  const [profile, setProfile] = useState(user);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('profile');
+
+  const [newName, setNewName] = useState(user?.name || '');
+  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'default-avatar');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
   const [isSaving, setIsSaving] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '' });
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setIsLoading(true);
       const token = sessionStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
       try {
         const response = await fetch('/api/profile', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -31,7 +35,7 @@ function ProfilePage({ user, onUserUpdate }) {
         if (!response.ok) throw new Error('Profil bilgileri alınamadı.');
         const data = await response.json();
         setProfile(data);
-        // DEĞİŞİKLİK: Varsayılan değer de uzantısız
+        setNewName(data.name);
         setSelectedAvatar(data.avatarId || 'default-avatar');
       } catch (error) {
         console.error("Profil alınırken hata:", error);
@@ -39,89 +43,196 @@ function ProfilePage({ user, onUserUpdate }) {
         setIsLoading(false);
       }
     };
-
     fetchProfile();
-  }, [navigate]);
+  }, []);
 
-  const handleAvatarSelect = (avatarId) => {
-    setSelectedAvatar(avatarId);
+  const showFeedback = (type, text) => {
+    setFeedbackMessage({ type, text });
+    setTimeout(() => setFeedbackMessage({ type: '', text: '' }), 3000);
   };
 
-  const handleSaveChanges = async () => {
-    if (isSaving || selectedAvatar === profile.avatarId) return;
-
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
     setIsSaving(true);
     const token = sessionStorage.getItem('token');
+    
     try {
-      const response = await fetch('/api/profile/avatar', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ avatarId: selectedAvatar })
-      });
+      const promises = [];
+      if (newName !== profile.name) {
+        promises.push(fetch('/api/profile/name', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ newName })
+        }));
+      }
+      if (selectedAvatar !== profile.avatarId) {
+        promises.push(fetch('/api/profile/avatar', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ avatarId: selectedAvatar })
+        }));
+      }
 
-      if (!response.ok) throw new Error('Avatar güncellenemedi.');
+      const responses = await Promise.all(promises);
+      for (const response of responses) {
+        if (!response.ok) {
+          if (response.status === 409) throw new Error("Bu isim zaten kullanılıyor.");
+          throw new Error('Profil güncellenemedi.');
+        }
+      }
       
-      onUserUpdate({ avatarId: selectedAvatar });
-      navigate('/dashboard');
-
+      onUserUpdate({ name: newName, avatarId: selectedAvatar });
+      showFeedback('success', 'Profil başarıyla güncellendi!');
     } catch (error) {
-      console.error("Avatar güncellenirken hata:", error);
+      showFeedback('error', error.message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showFeedback('error', 'Yeni şifreler eşleşmiyor.');
+      return;
+    }
+    setIsSaving(true);
+    const token = sessionStorage.getItem('token');
+    try {
+      const response = await fetch('/api/profile/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      if (!response.ok) {
+        if (response.status === 400) throw new Error('Mevcut şifre yanlış.');
+        throw new Error('Şifre güncellenemedi.');
+      }
+      showFeedback('success', 'Şifre başarıyla değiştirildi!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      showFeedback('error', error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+    const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'SİL') {
+      showFeedback('error', 'Lütfen onay metnini doğru girin.');
+      return;
+    }
+    setIsSaving(true);
+    const token = sessionStorage.getItem('token');
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Hesap silinemedi.');
+      
+      // DEĞİŞİKLİK: Önce oturumu temizle
+      onLogout(); 
+      
+      // Şimdi, LoginPage'in okuyabileceği bir "flash" mesaj bırak
+      sessionStorage.setItem('flashMessage', 'Hesabınız başarıyla silindi. Tekrar görüşmek üzere!');
+
+      // Son olarak, doğrudan giriş sayfasına yönlendir
+      navigate('/');
+      
+    } catch (error) {
+      showFeedback('error', error.message);
+      setIsSaving(false); // Sadece hata durumunda isSaving'i false yap
+    }
+    // Başarılı olursa zaten yönlendirme olacak, bu yüzden finally bloğu kaldırıldı.
   };
 
   if (isLoading) {
     return <div className="loading-screen">Profil yükleniyor...</div>;
   }
 
-  if (!profile) {
-    return <div>Profil bilgileri yüklenemedi.</div>;
-  }
-
   return (
     <div className="profile-page-container">
-      <div className="profile-card">
-        <h1>Profilim</h1>
-        <div className="profile-info">
-          <img 
-            // DEĞİŞİKLİK: .png burada ekleniyor
-            src={`http://localhost:8080/avatars/${profile.avatarId}.png`} 
-            alt="Mevcut Avatar" 
-            className="profile-avatar-large"
-          />
-          <div className="profile-details">
-            <span className="profile-name">{profile.name}</span>
-            <span className="profile-email">{profile.email}</span>
+      <div className="profile-tabs">
+        <button onClick={() => setActiveTab('profile')} className={activeTab === 'profile' ? 'active' : ''}>Profil</button>
+        <button onClick={() => setActiveTab('security')} className={activeTab === 'security' ? 'active' : ''}>Güvenlik</button>
+        <button onClick={() => setActiveTab('delete')} className={activeTab === 'delete' ? 'active' : ''}>Hesabı Sil</button>
+      </div>
+
+      <div className="profile-content">
+        {activeTab === 'profile' && (
+          <form onSubmit={handleProfileUpdate}>
+            <h2>Genel Bilgiler</h2>
+            <div className="form-group">
+              <label>Görünen İsim</label>
+              <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>E-posta Adresi</label>
+              <input type="email" value={profile.email} disabled />
+            </div>
+            <div className="form-group">
+              <label>Avatarını Seç</label>
+              <div className="avatar-grid">
+                {AVATAR_IDS.map(avatarId => (
+                  <img
+                    key={avatarId}
+                    src={`http://localhost:8080/avatars/${avatarId}.png`}
+                    alt={`Avatar ${avatarId}`}
+                    className={`avatar-option ${selectedAvatar === avatarId ? 'selected' : ''}`}
+                    onClick={() => setSelectedAvatar(avatarId)}
+                  />
+                ))}
+              </div>
+            </div>
+            <button type="submit" className="save-changes-btn" disabled={isSaving}>
+              {isSaving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+            </button>
+          </form>
+        )}
+
+        {activeTab === 'security' && (
+          <form onSubmit={handlePasswordChange}>
+            <h2>Şifre Değiştir</h2>
+            <div className="form-group">
+              <label>Mevcut Şifre</label>
+              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Yeni Şifre</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Yeni Şifre (Tekrar)</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            </div>
+            <button type="submit" className="save-changes-btn" disabled={isSaving}>
+              {isSaving ? 'Kaydediliyor...' : 'Şifreyi Değiştir'}
+            </button>
+          </form>
+        )}
+
+        {activeTab === 'delete' && (
+          <div className="delete-account-zone">
+            <h2>Hesabı Kalıcı Olarak Sil</h2>
+            <p>Bu işlemin geri dönüşü yoktur. Tüm odalarınız ve oylama geçmişiniz kalıcı olarak silinecektir.</p>
+            <div className="form-group">
+              <label>Devam etmek için lütfen "SİL" yazın.</label>
+              <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} />
+            </div>
+            <button onClick={handleDeleteAccount} className="save-changes-btn danger" disabled={isSaving || deleteConfirmText !== 'SİL'}>
+              {isSaving ? 'Siliniyor...' : 'Hesabımı Kalıcı Olarak Sil'}
+            </button>
           </div>
-        </div>
-        
-        <div className="avatar-selection">
-          <h2>Avatarını Seç</h2>
-          <div className="avatar-grid">
-            {AVATAR_IDS.map(avatarId => (
-              <img
-                key={avatarId}
-                // DEĞİŞİKLİK: .png burada ekleniyor
-                src={`http://localhost:8080/avatars/${avatarId}.png`}
-                alt={`Avatar ${avatarId}`}
-                className={`avatar-option ${selectedAvatar === avatarId ? 'selected' : ''}`}
-                onClick={() => handleAvatarSelect(avatarId)}
-              />
-            ))}
+        )}
+
+        {feedbackMessage.text && (
+          <div className={`feedback-message ${feedbackMessage.type}`}>
+            {feedbackMessage.text}
           </div>
-        </div>
-        
-        <button 
-          className="save-changes-btn"
-          onClick={handleSaveChanges}
-          disabled={isSaving || selectedAvatar === profile.avatarId}
-        >
-          {isSaving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-        </button>
+        )}
       </div>
     </div>
   );

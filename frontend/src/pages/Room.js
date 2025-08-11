@@ -52,6 +52,8 @@ function Room({ user: currentUser }) {
   const [aiReasoning, setAiReasoning] = useState(null);
   const [isKickModalOpen, setIsKickModalOpen] = useState(false);
   const [userToKick, setUserToKick] = useState(null);
+  // Değişiklik 1: Yeni State Değişkeni
+  const [activeParticipants, setActiveParticipants] = useState(new Set());
 
   const fetchTasks = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -111,6 +113,8 @@ function Room({ user: currentUser }) {
             setActiveTask(roomState.activeTask || { title: 'Henüz bir görev belirlenmedi.', description: '', cardSet: '' });
             setVotes(roomState.votes || {});
             setAiReasoning(roomState.aiReasoning || null);
+            // Değişiklik 2: WebSocket Mesajını İşle
+            setActiveParticipants(new Set(roomState.activeParticipants || []));
             setRevealVotes(false);
             setHasVoted(false);
         });
@@ -133,7 +137,7 @@ function Room({ user: currentUser }) {
   }, [user, roomId, fetchTasks]); 
 
   const isModerator = user?.name === roomOwner;
-  const allVotesIn = Object.keys(participants).length > 0 && Object.keys(participants).length === Object.keys(votes).length;
+  const allVotesIn = activeParticipants.size > 0 && activeParticipants.size === Object.keys(votes).length;
 
   const handleVote = (voteValue) => {
     if (stompClient && user?.name) {
@@ -233,31 +237,34 @@ function Room({ user: currentUser }) {
           <div>
             <h4>Katılımcılar ({Object.keys(votes).length}/{Object.keys(participants).length})</h4>
             <ul>
-              {Object.entries(participants).map(([name, avatarId]) => (
-                <li key={name}>
-                  <div className="participant-details">
-                    <div className="participant-avatar-container">
-                      <img 
-                        src={`http://localhost:8080/avatars/${avatarId}.png`} 
-                        alt={`${name} avatar`}
-                        className={`participant-avatar ${name === roomOwner ? 'moderator' : ''}`}
-                        onError={(e) => { e.target.onerror = null; e.target.src="http://localhost:8080/avatars/default-avatar.png" }}
-                      />
-                      {isModerator && name !== roomOwner && name !== AI_PARTICIPANT_NAME && (
-                        <button onClick={() => openKickConfirmModal(name)} className="kick-user-btn" title={`${name} kullanıcısını at`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                        </button>
-                      )}
-                    </div>
-                    <span className="participant-name">{name}</span>
-                  </div>
-                  <div className="participant-vote-status">
-                    {votes[name] && !revealVotes && <span className="vote-check">✓</span>}
-                    {votes[name] && revealVotes && <span className="vote-value">{votes[name]}</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
+  {Object.entries(participants).map(([name, avatarId]) => (
+    <li key={name}>
+      <div className="participant-details">
+        <div className="participant-avatar-container">
+          <img 
+            src={`http://localhost:8080/avatars/${avatarId}.png`} 
+            alt={`${name} avatar`}
+            className={`participant-avatar ${name === roomOwner ? 'moderator' : ''}`}
+            onError={(e) => { e.target.onerror = null; e.target.src="http://localhost:8080/avatars/default-avatar.png" }}
+          />
+          {/* YENİ: Durum göstergesi */}
+          <div className={`status-indicator ${activeParticipants.has(name) ? 'active' : 'inactive'}`}></div>
+
+          {isModerator && name !== roomOwner && name !== AI_PARTICIPANT_NAME && (
+            <button onClick={() => openKickConfirmModal(name)} className="kick-user-btn" title={`${name} kullanıcısını at`}>
+              <svg xmlns="http://www.w.3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          )}
+        </div>
+        <span className="participant-name">{name}</span>
+      </div>
+      <div className="participant-vote-status">
+        {votes[name] && !revealVotes && <span className="vote-check">✓</span>}
+        {votes[name] && revealVotes && <span className="vote-value">{votes[name]}</span>}
+      </div>
+    </li>
+  ))}
+</ul>
           </div>
           
           {isModerator && activeTask.title !== 'Henüz bir görev belirlenmedi.' && !revealVotes && (

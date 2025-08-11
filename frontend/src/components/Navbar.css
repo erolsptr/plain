@@ -64,11 +64,33 @@
   color: var(--primary-color);
 }
 
-.navbar-user-greeting {
-  color: var(--text-color-muted);
-  padding: 0.5rem 1rem;
-  white-space: nowrap;
+/* --- YENİ VE GÜNCELLENMİŞ STİLLER --- */
+
+.navbar-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Avatar ve isim arasındaki boşluk */
+  text-decoration: none;
+  color: var(--text-color);
+  padding: 6px 12px 6px 6px; /* Sağa daha fazla, sola daha az boşluk */
+  border-radius: 25px; /* Yuvarlak kenarlar */
+  transition: background-color 0.2s ease-out;
 }
+
+.navbar-profile-link:hover {
+  background-color: var(--panel-hover-color);
+}
+
+.navbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+}
+
+/* --- ESKİ STİL SİLİNDİ --- */
+/* .navbar-user-greeting artık kullanılmıyor */
 
 .navbar-button {
   background-color: transparent;

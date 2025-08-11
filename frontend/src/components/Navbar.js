@@ -21,15 +21,22 @@ function Navbar({ user, onLogout }) {
         <ul className="navbar-menu">
           {user ? (
             <>
-              <li className="navbar-item">
-                {/* DEĞİŞİKLİK: Span'ı Link'e çevirdik */}
-                <Link to="/profile" className="navbar-user-greeting">
-                  Hoşgeldin, {user.name}!
-                </Link>
-              </li>
+              {/* DEĞİŞİKLİK: "Kontrol Paneli" linki öne alındı */}
               <li className="navbar-item">
                 <Link to="/dashboard" className="navbar-links">
                   Kontrol Paneli
+                </Link>
+              </li>
+              {/* DEĞİŞİKLİK: Profil linki, diğer linklerden sonra geliyor */}
+              <li className="navbar-item">
+                <Link to="/profile" className="navbar-profile-link">
+                  <img 
+                    src={`http://localhost:8080/avatars/${user.avatarId}.png`} 
+                    alt="User Avatar" 
+                    className="navbar-avatar"
+                    onError={(e) => { e.target.onerror = null; e.target.src="http://localhost:8080/avatars/default-avatar.png" }}
+                  />
+                  <span>{user.name}</span>
                 </Link>
               </li>
               <li className="navbar-item">

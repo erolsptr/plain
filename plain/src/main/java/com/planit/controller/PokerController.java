@@ -131,6 +131,8 @@ public class PokerController {
         String username = joinMessage.getSender();
         roomService.addUserToRoom(roomId, username);
         headerAccessor.getSessionAttributes().put("username", username);
+        // YENİ SATIR: Hangi odada olduğunu oturuma kaydet
+        headerAccessor.getSessionAttributes().put("roomId", roomId);
         publishFullRoomState(roomId);
     }
 
@@ -193,16 +195,17 @@ public class PokerController {
         publishFullRoomState(roomId);
     }
 
-    private void publishFullRoomState(String roomId) {
-        RoomState currentRoomState = new RoomState();
-        currentRoomState.setOwner(roomService.getRoomOwner(roomId));
-        // DEĞİŞİKLİK: Artık avatar'lı haritayı alıyoruz
-        currentRoomState.setParticipants(roomService.getParticipantsWithAvatars(roomId));
-        currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
-        currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
-        currentRoomState.setAreVotesRevealed(false);
-        currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
-        
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
-    }
+    public void publishFullRoomState(String roomId) {
+    RoomState currentRoomState = new RoomState();
+    currentRoomState.setOwner(roomService.getRoomOwner(roomId));
+    currentRoomState.setParticipants(roomService.getParticipantsWithAvatars(roomId));
+    // YENİ SATIR: Aktif katılımcı listesini ekle
+    currentRoomState.setActiveParticipants(roomService.getActiveParticipants(roomId));
+    currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
+    currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
+    currentRoomState.setAreVotesRevealed(false);
+    currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
+    
+    messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
+}
 }

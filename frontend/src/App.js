@@ -81,13 +81,17 @@ function App() {
           />
           {/* YENİ ROTA: Profil sayfası */}
           <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute user={currentUser}>
-                <ProfilePage user={currentUser} onUserUpdate={handleUserUpdate} />
-              </ProtectedRoute>
-            } 
-          />
+  path="/profile" 
+  element={
+    <ProtectedRoute user={currentUser}>
+      <ProfilePage 
+        user={currentUser} 
+        onUserUpdate={handleUserUpdate} 
+        onLogout={handleLogout}  // EKSİK OLAN PROP BURAYA EKLENDİ
+      />
+    </ProtectedRoute>
+  } 
+/>
         </Routes>
       </main>
     </div>
