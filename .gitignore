@@ -59,4 +59,4 @@ yarn-error.log*
 /frontend/.pnp.js
 
 # Hassas ortam değişkeni dosyalarını yoksay
-ai-service/.env
+/ai-server/.env
