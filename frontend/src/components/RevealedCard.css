@@ -1,0 +1,139 @@
+/* RevealedCard.css - Sonuç Kartları için Özel Stiller */
+
+.revealed-card {
+  width: 120px;
+  height: 180px;
+  background: linear-gradient(145deg, #f9f9f9, #e6e6e6);
+  border: 1px solid #d1d1d1;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  color: #333;
+  position: relative;
+  display: flex;
+  flex-direction: column; /* İçeriği dikey hizalamak için */
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  overflow: hidden;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* Arka plan sembolleri için genel kural */
+.revealed-card::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Times New Roman', serif;
+  font-size: 6rem;
+  color: rgba(0, 0, 0, 0.08);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Sembol atamaları */
+.revealed-card[data-suit="spades"]::after { content: '♠'; }
+.revealed-card[data-suit="hearts"]::after { content: '♥'; color: rgba(217, 30, 24, 0.08); }
+.revealed-card[data-suit="clubs"]::after { content: '♣'; }
+.revealed-card[data-suit="diamonds"]::after { content: '♦'; color: rgba(217, 30, 24, 0.08); }
+
+/* Ortadaki büyük oy değeri */
+.card-value-main.revealed {
+  font-size: 3.5rem;
+  font-weight: 700;
+  z-index: 2;
+  flex-grow: 1; /* Ortadaki alanı doldurur */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Köşe değerleri */
+.card-corner {
+  position: absolute;
+  font-size: 1.2rem;
+  font-weight: 600;
+  z-index: 2;
+}
+.revealed-card[data-suit="hearts"] .card-corner,
+.revealed-card[data-suit="diamonds"] .card-corner {
+  color: #D91E18;
+}
+.card-corner.top-left { top: 12px; left: 12px; }
+.card-corner.bottom-right { bottom: 12px; right: 12px; transform: rotate(180deg); }
+
+
+/* Kartın altındaki kullanıcı bilgi alanı */
+.voter-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  z-index: 2;
+  margin-top: auto; /* En dibe iter */
+  background: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  border-radius: 0 0 10px 10px;
+  backdrop-filter: blur(2px);
+}
+.voter-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+}
+.voter-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* --- ÖZEL KART TİPLERİ --- */
+
+/* AI Asistan Kartı (Joker) */
+.revealed-card.ai-card {
+  border: 2px solid var(--secondary-color, #805AD5);
+}
+.revealed-card.ai-card::after {
+  content: '🃏';
+  font-size: 5.5rem; /* Boyutunu biraz daha artıralım */
+  color: rgba(0, 0, 0, 0.15); /* Opaklık yerine doğrudan renk verelim */
+  opacity: 0.9; /* Opaklığı tam yapalım ki soluk durmasın */
+}
+.revealed-card.ai-card .voter-name {
+  color: var(--secondary-color, #805AD5);
+}
+
+
+/* Karar Oyu Kartı (Kral/Kraliçe) */
+.consensus-card {
+  width: 150px;
+  height: 220px;
+  background: linear-gradient(145deg, #fffbeb, #fde488);
+  border: 2px solid #fbbF24;
+  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #78350f; /* Koyu kahve/altın rengi */
+}
+.consensus-label {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.consensus-value {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.consensus-icon {
+  font-size: 1.5rem;
+  margin-top: 5px;
+}

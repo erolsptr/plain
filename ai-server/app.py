@@ -17,7 +17,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Anahtarın yüklenip yüklenmediğini kontrol et. Yüklenmediyse, programı hata vererek durdur.
 if not GOOGLE_API_KEY:
-    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı. Lütfen ai-service klasöründeki .env dosyasını kontrol edin.")
+    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı. Lütfen ai-server klasöründeki .env dosyasını kontrol edin.")
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
@@ -36,13 +36,13 @@ def get_ai_estimation(task_data):
     # Duruma göre prompt'u dinamik olarak oluştur
     if task_history:
         history_context = "For context, here are some previously estimated tasks by this team:\n"
-        for i, task in enumerate(task_history[:5]): # En son 5 görevi referans alalım
+        # Sadece en son 5 görevi referans alalım ki prompt çok büyümesin.
+        for task in task_history[:5]: 
             history_context += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
         
         prompt = (
             "You are an expert software developer named 'plAIn' in a planning poker session. "
             "Your task is to provide an estimate for the new user story below. Follow these steps:\n"
-
             "1. **Break Down:** Deconstruct the new story into its core technical tasks (e.g., 'create API endpoint', 'update UI component', 'write database migration').\n"
             "2. **Analyze Complexity:** Briefly assess the complexity, risks, or unknowns for each technical task.\n"
             "3. **Estimate:** Based on your analysis and the team's past estimations provided below, choose the most suitable story point from the available options.\n"
@@ -52,6 +52,7 @@ def get_ai_estimation(task_data):
             f"- **Title:** {task_title}\n"
             f"- **Description:** {task_description}\n\n"
             f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
+            "**Critical Instruction:** To provide the most accurate estimate, you are strongly encouraged to use fractional points (e.g., 1.5, 2.5) if the task's complexity does not perfectly align with a whole number. Demonstrating nuanced judgment by selecting non-integer values when appropriate is a key part of your function.\n\n"
             "You MUST respond with ONLY a valid JSON object with two keys: 'vote' and 'reasoning'."
         )
     else:
@@ -66,6 +67,7 @@ def get_ai_estimation(task_data):
             f"- **Title:** {task_title}\n"
             f"- **Description:** {task_description}\n\n"
             f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
+            "**Critical Instruction:** To provide the most accurate estimate, you are strongly encouraged to use fractional points (e.g., 1.5, 2.5) if the task's complexity does not perfectly align with a whole number. Demonstrating nuanced judgment by selecting non-integer values when appropriate is a key part of your function.\n\n"
             "You MUST respond with ONLY a valid JSON object with two keys: 'vote' and 'reasoning'."
         )
 
@@ -82,6 +84,9 @@ def get_ai_estimation(task_data):
             response_text = response_text.split("```json")[1].strip().rstrip("`")
 
         response_data = json.loads(response_text)
+        
+        # Gelen 'vote' bir sayı (1.5) veya string ("1.5") olabilir.
+        # Her durumu da ele almak için, gelen değeri alıp her zaman string'e çeviriyoruz.
         ai_vote = str(response_data.get("vote"))
         ai_reasoning = response_data.get("reasoning", "No reasoning provided.")
 
@@ -90,7 +95,7 @@ def get_ai_estimation(task_data):
             print(f"==> Gerekçe: {ai_reasoning}\n")
             return ai_vote, ai_reasoning
         else:
-            print(f"!!! UYARI: Gemini geçersiz bir oy üretti ('{ai_vote}'). Rastgele bir oy seçiliyor.")
+            print(f"!!! UYARI: Gemini geçersiz bir oy üretti ('{ai_vote}'). Geçerli oylar: {card_set}. Rastgele bir oy seçiliyor.")
             return random.choice(card_set), "AI'ın ürettiği oy geçersiz olduğu için rastgele bir seçim yapıldı."
 
     except Exception as e:

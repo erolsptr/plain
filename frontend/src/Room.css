@@ -732,3 +732,121 @@
 .status-indicator.inactive {
   background-color: #7f8c8d; /* Gri */
 }
+/* Room.css içine eklenecek veya güncellenecek */
+
+.results-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+  margin-top: 20px;
+}
+.results-container h2 {
+  font-size: 1.8rem;
+  color: var(--text-color);
+  margin: 0;
+}
+.results-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end; /* Kartları alt çizgide hizala */
+  gap: 20px;
+}
+.ai-reasoning-box {
+  background-color: var(--panel-color, #2D3748);
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+  max-width: 700px;
+  border: 1px solid var(--border-color, #4A5568);
+}
+.ai-reasoning-box h4 {
+  margin: 0 0 10px 0;
+  color: var(--secondary-color, #805AD5);
+}
+.ai-reasoning-box p {
+  margin: 0;
+  color: var(--text-color-muted, #A0AEC0);
+  font-style: italic;
+  line-height: 1.5;
+}
+/* Room.css - GENEL YAPI VE TAŞMA SORUNU İÇİN NİHAİ ÇÖZÜM */
+
+/* 1. Ana panelin genişliğini kontrol altına alalım */
+.main-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* BU ÇOK ÖNEMLİ: Panelin, kendi genişliğinin dışına taşmasını engeller. */
+  overflow: hidden; 
+}
+
+/* 2. Görev listesi bölümünün de taşmasını engelleyelim */
+.task-list-section {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--panel-color);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+  /* Konteynerin esnemesine ama taşmamasına izin ver */
+  min-height: 200px;
+}
+
+.task-list-content {
+  margin-top: 20px;
+  overflow-y: auto; /* İçerik sığmazsa, sadece bu alanda bir kaydırma çubuğu çıksın */
+}
+
+
+/* 3. Sorunlu olan .task-history-card'ı yeniden tanımlayalım */
+.task-history-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px; /* Elemanlar arası boşluk */
+  padding: 15px;
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.task-history-card:hover {
+  background-color: var(--panel-hover-color);
+}
+
+/* 4. Kartın içindeki başlık ve alt bilgi için bir sarmalayıcı (Bu JS'de yoksa bile CSS'te sorun yaratmaz) */
+/* Eğer JS'de header/footer divleri varsa bu çalışır, yoksa da zarar vermez. */
+.task-history-card-header, .task-history-card-details {
+  flex-grow: 1; /* Mevcut alanı doldur */
+  min-width: 0;  /* Esnek elemanın küçülebilmesini sağlar - EN KRİTİK KURAL */
+}
+
+/* 5. Uzun başlıkların taşmasını engelleyen sihirli kurallar */
+.task-history-card-title {
+  font-weight: 600;
+  white-space: nowrap;      /* Metni tek satırda kalmaya zorla */
+  overflow: hidden;         /* Taşan kısmı gizle */
+  text-overflow: ellipsis;  /* Sonuna "..." ekle */
+  display: block;           /* Bu kuralların çalışması için block seviyesinde olmalı */
+}
+
+.task-history-card-footer {
+  font-size: 0.85rem;
+  color: var(--text-color-muted);
+}
+
+/* 6. Puan göstergesinin sabit kalmasını ve içeriği ezmemesini sağlayalım */
+.task-history-card-score {
+  flex-shrink: 0; /* Bu elemanın küçülmesini engelle */
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  background-color: var(--bg-color);
+  padding: 5px 10px;
+  border-radius: 5px;
+}

@@ -373,6 +373,10 @@ public void createRoom(String roomId, String ownerEmail) {
                 "consensusScore", (String) historyItem.get("consensusScore")
             ))
             .collect(Collectors.toList());
+            final int HISTORY_LIMIT = 10; // AI'a gönderilecek maksimum geçmiş görev sayısı
+    if (simplifiedHistory.size() > HISTORY_LIMIT) {
+        simplifiedHistory = simplifiedHistory.subList(0, HISTORY_LIMIT);
+    }
         logger.info("Triggering AI estimation for task: {} in room: {}. Including {} history items.", task.getId(), roomId, simplifiedHistory.size());
         Map<String, Object> payload = new HashMap<>();
         payload.put("roomId", roomId);

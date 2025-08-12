@@ -8,6 +8,7 @@ import TaskDisplay from '../TaskDisplay';
 import TaskForm from '../TaskForm';
 import VotingCards from '../VotingCards';
 import Modal from '../components/Modal';
+import RevealedCard from '../components/RevealedCard';
 import '../VotingCards.css';
 import '../Room.css';
 
@@ -15,17 +16,44 @@ const SOCKET_URL = 'http://localhost:8080/ws-poker';
 const AI_PARTICIPANT_NAME = 'plAIn Asistanı';
 
 const getVoteResult = (votes) => {
-    if (!votes || Object.keys(votes).length === 0) return null;
-    const voteCounts = Object.values(votes).reduce((acc, vote) => { acc[vote] = (acc[vote] || 0) + 1; return acc; }, {});
-    let maxCount = 0; let consensusVote = null; let tie = false;
-    for (const vote in voteCounts) {
-        if (voteCounts[vote] > maxCount) {
-            maxCount = voteCounts[vote]; consensusVote = vote; tie = false;
-        } else if (voteCounts[vote] === maxCount) {
-            tie = true;
+    // 1. Oyları ve seçmenleri al
+    const voteEntries = Object.entries(votes);
+    if (!voteEntries.length) return null;
+
+    // 2. Her bir oy değerinin kaç kez verildiğini say
+    const voteCounts = voteEntries.reduce((acc, [voter, vote]) => {
+        acc[vote] = (acc[vote] || 0) + 1;
+        return acc;
+    }, {});
+
+    // 3. En yüksek oy sayısını bul
+    const maxCount = Math.max(...Object.values(voteCounts));
+
+    // 4. En yüksek sayıda oy alan tüm değerleri (kazananları) bul
+    const winners = Object.keys(voteCounts).filter(vote => voteCounts[vote] === maxCount);
+
+    // 5. Eğer sadece bir kazanan varsa, doğrudan onu döndür
+    if (winners.length === 1) {
+        return winners[0];
+    }
+    
+    // 6. EŞİTLİK DURUMU İÇİN YENİ MANTIK
+    if (winners.length > 1) {
+        // AI'ın oyunu bul
+        const aiVoteEntry = voteEntries.find(([voter, vote]) => voter === AI_PARTICIPANT_NAME);
+        const aiVoteValue = aiVoteEntry ? aiVoteEntry[1] : null;
+        
+        // Kazananlar listesinden AI'ın oyunu (eğer kazananlar arasındaysa) çıkar
+        const humanWinners = winners.filter(vote => vote !== aiVoteValue);
+
+        // Eğer AI'ın oyunu çıkarıldıktan sonra geriye TEK bir kazanan kalıyorsa, o insana ait oyu karar olarak kabul et
+        if (humanWinners.length === 1) {
+            return humanWinners[0];
         }
     }
-    return tie ? "Anlaşma Yok" : consensusVote;
+
+    // Yukarıdaki koşulların hiçbiri karşılanmazsa (örn: insanlar arasında da eşitlik varsa), anlaşma yoktur.
+    return "Anlaşma Yok";
 };
 
 function Room({ user: currentUser }) {
@@ -299,20 +327,27 @@ function Room({ user: currentUser }) {
               revealVotes ? (
                 <div className="results-container">
                     <h2>Oylama Sonuçları</h2>
-                    {consensus && (
-                        <div className="consensus-card">
-                            <div className="consensus-label">Karar Oyu</div>
-                            <div className="consensus-value">{consensus}</div>
-                        </div>
-                    )}
                     <div className="results-grid">
+                      {/* Önce Karar Oyu Kartını render et */}
+                      {consensus && (
+                        <RevealedCard 
+                          isConsensus={true} 
+                          consensusValue={consensus} 
+                        />
+                      )}
+                      
+                      {/* Sonra diğer tüm oyları render et */}
                       {Object.entries(votes).map(([name, vote]) => (
-                        <div key={name} className="result-card">
-                          <div className="vote-value-big">{vote}</div>
-                          <div className="voter-name">{name}</div>
-                        </div>
+                        <RevealedCard
+                          key={name}
+                          name={name}
+                          vote={vote}
+                          avatarId={participants[name]} // Katılımcı avatarını gönder
+                          isAI={name === AI_PARTICIPANT_NAME}
+                        />
                       ))}
                     </div>
+                    {/* AI Gerekçesi kutusu hala aynı */}
                     {aiReasoning && (
                       <div className="ai-reasoning-box">
                         <h4>{AI_PARTICIPANT_NAME}'ın Düşüncesi</h4>

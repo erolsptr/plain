@@ -1,29 +1,26 @@
 import React, { useState, useEffect } from 'react';
 
+// Yeni "Sık Kullanılanlar" destesi tanımlandı
+const FAVORITES_DECK = ['0', '½', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
+
 const CARD_SETS = {
+  // Yeni deste en üste eklendi
+  FAVORITES: FAVORITES_DECK,
   FIBONACCI: ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕'],
   MODIFIED_FIB: ['0', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '8', '13', '?', '☕'],
   SCRUM: ['0', '½', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '☕'],
   SEQUENTIAL: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
   HOURS: ['1', '2', '4', '8', '16', '24', '32', '40'],
 };
-const MANUAL_CARDS = [...new Set([...CARD_SETS.FIBONACCI, ...CARD_SETS.MODIFIED_FIB, ...CARD_SETS.SCRUM, ...CARD_SETS.SEQUENTIAL, ...CARD_SETS.HOURS])].sort((a,b) => {
-    const valA = a === '½' ? 0.5 : Number(a);
-    const valB = b === '½' ? 0.5 : Number(b);
-    if (isNaN(valA) || isNaN(valB)) return 1; 
-    return valA - valB;
-});
+
+// 'MANUAL_CARDS' ile ilgili tüm mantık kaldırıldı.
 
 const getDefaultSelectedCards = (cardSetArray) => {
   const defaultSelection = new Set();
-  cardSetArray.forEach(card => {
-    if (card === '?' || card === '☕') {
-      return;
-    }
-    const numericValue = card === '½' ? 0.5 : parseFloat(card);
-    if (!isNaN(numericValue) && numericValue <= 5) {
-      defaultSelection.add(card);
-    }
+  // '?' ve '☕' gibi özel kartları her zaman hariç tut
+  const filteredCards = cardSetArray.filter(card => card !== '?' && card !== '☕');
+  filteredCards.forEach(card => {
+    defaultSelection.add(card);
   });
   return defaultSelection;
 };
@@ -32,16 +29,15 @@ const getDefaultSelectedCards = (cardSetArray) => {
 function TaskForm({ roomId, onTaskCreated }) { 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [cardSet, setCardSet] = useState('FIBONACCI');
-  const [selectedCards, setSelectedCards] = useState(getDefaultSelectedCards(CARD_SETS.FIBONACCI));
+  // Varsayılan deste olarak 'FAVORITES' ayarlandı
+  const [cardSet, setCardSet] = useState('FAVORITES');
+  const [selectedCards, setSelectedCards] = useState(getDefaultSelectedCards(CARD_SETS.FAVORITES));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (cardSet === 'MANUAL') {
-      setSelectedCards(new Set(MANUAL_CARDS));
-    } else {
-      setSelectedCards(getDefaultSelectedCards(CARD_SETS[cardSet]));
-    }
+    // 'MANUAL' kontrolü kaldırıldı, mantık basitleştirildi.
+    // Her deste değişiminde, o destenin tüm kartları varsayılan olarak seçilir.
+    setSelectedCards(getDefaultSelectedCards(CARD_SETS[cardSet]));
   }, [cardSet]);
 
   const handleCardToggle = (cardValue) => {
@@ -56,14 +52,17 @@ function TaskForm({ roomId, onTaskCreated }) {
     });
   };
 
-  // --- BU FONKSİYON TAMAMEN YENİLENDİ (ARTIK FormData KULLANIYOR) ---
   const handleSetTask = async () => {
     if (!title.trim() || isSubmitting) {
       return;
     }
+    // Seçili kart yoksa göndermeyi engelle
+    if (selectedCards.size === 0) {
+        alert("Lütfen en az bir kart seçin.");
+        return;
+    }
     setIsSubmitting(true);
 
-    // JSON yerine bir FormData nesnesi oluştur
     const formData = new FormData();
     formData.append('title', title.trim());
     formData.append('description', description.trim());
@@ -80,16 +79,12 @@ function TaskForm({ roomId, onTaskCreated }) {
       const response = await fetch(`/api/rooms/${roomId}/tasks`, {
         method: 'POST',
         headers: {
-          // 'Content-Type' başlığını KESİNLİKLE belirtme!
-          // Tarayıcı, FormData kullandığında bunu kendisi otomatik olarak
-          // 'multipart/form-data' ve gerekli boundary ile ayarlar.
           'Authorization': `Bearer ${token}`
         },
-        body: formData // JSON.stringify yerine doğrudan formData nesnesini gönder
+        body: formData
       });
 
       if (!response.ok) {
-        // Hata mesajını sunucudan almayı dene (daha bilgilendirici olabilir)
         const errorText = await response.text();
         console.error("Sunucu hatası:", errorText);
         throw new Error(`Görev oluşturulamadı. Sunucu durumu: ${response.status}`);
@@ -99,6 +94,8 @@ function TaskForm({ roomId, onTaskCreated }) {
       onTaskCreated(createdTask);
       setTitle('');
       setDescription('');
+      // Form gönderildikten sonra varsayılan desteye geri dön
+      setCardSet('FAVORITES'); 
 
     } catch (error) {
       console.error("Görev oluşturma hatası:", error);
@@ -107,10 +104,9 @@ function TaskForm({ roomId, onTaskCreated }) {
       setIsSubmitting(false);
     }
   };
-  // --- YENİLEME SONU ---
 
-
-  const currentVisibleCards = cardSet === 'MANUAL' ? MANUAL_CARDS : CARD_SETS[cardSet];
+  // 'MANUAL' mantığı kaldırıldığı için bu satır basitleştirildi.
+  const currentVisibleCards = CARD_SETS[cardSet];
 
   return (
     <div className="task-form">
@@ -134,12 +130,14 @@ function TaskForm({ roomId, onTaskCreated }) {
           value={cardSet} 
           onChange={(e) => setCardSet(e.target.value)}
         >
+          {/* Seçenekler CARD_SETS nesnesinden dinamik olarak oluşturuluyor */}
+          <option value="FAVORITES">Sık Kullanılanlar</option>
           <option value="FIBONACCI">Fibonacci</option>
-          <option value="MODIFIED_FIB">Değiştirilmiş Fibonacci (Ara Değerli)</option>
-          <option value="SCRUM">Scrum </option>
+          <option value="MODIFIED_FIB">Değiştirilmiş Fibonacci</option>
+          <option value="SCRUM">Scrum</option>
           <option value="SEQUENTIAL">Sıralı</option>
           <option value="HOURS">Saat</option>
-          <option value="MANUAL">Tümünü Göster/Düzenle</option>
+          {/* 'MANUAL' seçeneği kaldırıldı */}
         </select>
       </div>
 
