@@ -23,7 +23,7 @@ function DashboardPage({ user }) {
 
   const fetchRoomsAndDetails = useCallback(async () => {
     setIsLoading(true);
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       setIsLoading(false);
       return;
@@ -81,7 +81,7 @@ function DashboardPage({ user }) {
       return;
     }
     setIsSubmitting(true);
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       alert("Yetkilendirme anahtarı bulunamadı.");
       setIsSubmitting(false);
@@ -140,7 +140,7 @@ function DashboardPage({ user }) {
     e.stopPropagation(); 
     const isConfirmed = window.confirm("Bu odayı ve tüm geçmişini kalıcı olarak silmek istediğinizden emin misiniz?");
     if (!isConfirmed) return;
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) { alert("Yetkilendirme anahtarı bulunamadı."); return; }
     try {
       // Önce asıl odayı silmeyi dene, bu ana işlem

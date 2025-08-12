@@ -56,7 +56,7 @@ function Room({ user: currentUser }) {
   const [activeParticipants, setActiveParticipants] = useState(new Set());
 
   const fetchTasks = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return;
     try {
       const [completedResponse, pendingResponse] = await Promise.all([
@@ -75,7 +75,7 @@ function Room({ user: currentUser }) {
   
   useEffect(() => {
     const fetchRoomDetails = async () => {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) return;
       try {
         const response = await fetch(`/api/room-details?roomIds=${roomId}`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -102,7 +102,7 @@ function Room({ user: currentUser }) {
     let stateSub, revealSub, historySub; 
     const client = new Client({
       webSocketFactory: () => new SockJS(SOCKET_URL),
-      connectHeaders: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      connectHeaders: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       reconnectDelay: 5000,
       onConnect: () => {
         setIsConnected(true);
@@ -181,7 +181,7 @@ function Room({ user: currentUser }) {
 
   const handleSaveResult = async () => {
     if (!isModerator) return;
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) { alert("Yetkilendirme anahtarı bulunamadı."); return; }
     try {
       const response = await fetch(`/api/rooms/${roomId}/save-result`, {

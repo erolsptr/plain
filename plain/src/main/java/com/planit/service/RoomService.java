@@ -19,6 +19,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -290,20 +291,29 @@ public class RoomService {
     }
 
     @Transactional
-    public void createRoom(String roomId, String ownerEmail) {
-        User owner = userRepository.findByEmail(ownerEmail).orElseThrow(() -> new RuntimeException("Oda sahibi kullanıcı bulunamadı: " + ownerEmail));
-        String ownerName = owner.getName();
-        Set<String> participants = new HashSet<>();
-        participants.add(ownerName);
-        participants.add(AI_PARTICIPANT_NAME);
-        rooms.put(roomId, participants);
-        roomOwners.put(roomId, ownerName); 
-        PokerRoom newRoom = new PokerRoom();
-        newRoom.setId(roomId);
-        newRoom.setOwner(owner);
-        newRoom.addParticipant(owner);
-        pokerRoomRepository.save(newRoom);
+public void createRoom(String roomId, String ownerEmail) {
+    logger.error("--- createRoom BAŞLADI --- İstenen Sahip E-postası: '{}'", ownerEmail);
+
+    User owner = userRepository.findByEmail(ownerEmail)
+            .orElseThrow(() -> {
+                logger.error("--- HATA --- findByEmail '{}' ile kullanıcıyı BULAMADI.", ownerEmail);
+                return new RuntimeException("Oda sahibi kullanıcı bulunamadı: " + ownerEmail);
+            });
+    
+    logger.error("--- KANIT --- findByEmail '{}' sorgusu, Adı: '{}' olan kullanıcıyı getirdi.", ownerEmail, owner.getName());
+
+    if (!owner.getEmail().equals(ownerEmail)) {
+        logger.error("!!!!!! KRİTİK HATA! VERİTABANI SORGUSU YANLIŞ KULLANICIYI GETİRDİ! İstenen: {}, Gelen: {}", ownerEmail, owner.getEmail());
     }
+
+    PokerRoom newRoom = new PokerRoom();
+    newRoom.setId(roomId);
+    newRoom.setOwner(owner);
+    newRoom.addParticipant(owner);
+    pokerRoomRepository.save(newRoom);
+
+    logger.error("--- ODA OLUŞTURULDU --- Sahip olarak atanan kullanıcı: '{}'", owner.getName());
+}
 
     @Transactional
     public Task createTask(String roomId, TaskCreationRequest taskRequest, String requesterEmail) {
@@ -382,11 +392,28 @@ public class RoomService {
         }
     }
 
-    @Transactional
-    public Set<Map<String, String>> findRoomsByUserEmail(String userEmail) {
-        Set<PokerRoom> userRooms = pokerRoomRepository.findRoomsByParticipantEmail(userEmail);
-        return userRooms.stream().map(room -> Map.of( "roomId", room.getId(), "ownerName", room.getOwner().getName(), "taskCount", String.valueOf(room.getTasks().size()) )).collect(Collectors.toSet());
-    }
+   @Transactional
+public Set<Map<String, String>> findRoomsByUserEmail(String userEmail) {
+    // 1. Önce e-postadan kullanıcının GERÇEK ID'sini bul.
+    User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userEmail));
+    Long userId = user.getId();
+
+    // 2. Sadece ve sadece bu ID'yi kullanarak odaları bul.
+    Set<PokerRoom> userRooms = pokerRoomRepository.findRoomsByParticipantId(userId);
+
+    // 3. Sonucu işle.
+    return userRooms.stream()
+            .map(room -> {
+                String ownerName = (room.getOwner() != null) ? room.getOwner().getName() : "Bilinmiyor";
+                return Map.of(
+                        "roomId", room.getId(),
+                        "ownerName", ownerName,
+                        "taskCount", String.valueOf(room.getTasks().size())
+                );
+            })
+            .collect(Collectors.toSet());
+}
 
     @Transactional
     public void startNewRound(String roomId) {

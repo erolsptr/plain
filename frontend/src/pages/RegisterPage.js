@@ -14,6 +14,8 @@ function RegisterPage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
 
     try {
       const response = await fetch('/api/auth/register', {

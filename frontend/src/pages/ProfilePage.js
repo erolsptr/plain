@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // Artık kullanılmıyor
 import './ProfilePage.css';
 
 const AVATAR_IDS = [
@@ -17,12 +17,11 @@ function ProfilePage({ user, onUserUpdate, onLogout }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '' });
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Artık kullanılmıyor
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -119,36 +118,6 @@ function ProfilePage({ user, onUserUpdate, onLogout }) {
     }
   };
 
-    const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'SİL') {
-      showFeedback('error', 'Lütfen onay metnini doğru girin.');
-      return;
-    }
-    setIsSaving(true);
-    const token = sessionStorage.getItem('token');
-    try {
-      const response = await fetch('/api/profile', {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Hesap silinemedi.');
-      
-      // DEĞİŞİKLİK: Önce oturumu temizle
-      onLogout(); 
-      
-      // Şimdi, LoginPage'in okuyabileceği bir "flash" mesaj bırak
-      sessionStorage.setItem('flashMessage', 'Hesabınız başarıyla silindi. Tekrar görüşmek üzere!');
-
-      // Son olarak, doğrudan giriş sayfasına yönlendir
-      navigate('/');
-      
-    } catch (error) {
-      showFeedback('error', error.message);
-      setIsSaving(false); // Sadece hata durumunda isSaving'i false yap
-    }
-    // Başarılı olursa zaten yönlendirme olacak, bu yüzden finally bloğu kaldırıldı.
-  };
-
   if (isLoading) {
     return <div className="loading-screen">Profil yükleniyor...</div>;
   }
@@ -158,7 +127,6 @@ function ProfilePage({ user, onUserUpdate, onLogout }) {
       <div className="profile-tabs">
         <button onClick={() => setActiveTab('profile')} className={activeTab === 'profile' ? 'active' : ''}>Profil</button>
         <button onClick={() => setActiveTab('security')} className={activeTab === 'security' ? 'active' : ''}>Güvenlik</button>
-        <button onClick={() => setActiveTab('delete')} className={activeTab === 'delete' ? 'active' : ''}>Hesabı Sil</button>
       </div>
 
       <div className="profile-content">
@@ -212,20 +180,6 @@ function ProfilePage({ user, onUserUpdate, onLogout }) {
               {isSaving ? 'Kaydediliyor...' : 'Şifreyi Değiştir'}
             </button>
           </form>
-        )}
-
-        {activeTab === 'delete' && (
-          <div className="delete-account-zone">
-            <h2>Hesabı Kalıcı Olarak Sil</h2>
-            <p>Bu işlemin geri dönüşü yoktur. Tüm odalarınız ve oylama geçmişiniz kalıcı olarak silinecektir.</p>
-            <div className="form-group">
-              <label>Devam etmek için lütfen "SİL" yazın.</label>
-              <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} />
-            </div>
-            <button onClick={handleDeleteAccount} className="save-changes-btn danger" disabled={isSaving || deleteConfirmText !== 'SİL'}>
-              {isSaving ? 'Siliniyor...' : 'Hesabımı Kalıcı Olarak Sil'}
-            </button>
-          </div>
         )}
 
         {feedbackMessage.text && (

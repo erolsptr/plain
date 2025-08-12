@@ -46,6 +46,7 @@ public class PokerController {
     @PostMapping("/api/rooms")
     public ResponseEntity<Map<String, String>> createRoom(Authentication authentication) {
         String ownerEmail = authentication.getName();
+        //String ownerEmail = "erol@example.com";
         String newRoomId = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         roomService.createRoom(newRoomId, ownerEmail);
         return ResponseEntity.ok(Map.of("roomId", newRoomId));

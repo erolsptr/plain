@@ -69,7 +69,7 @@ function TaskForm({ roomId, onTaskCreated }) {
     formData.append('description', description.trim());
     formData.append('cardSet', Array.from(selectedCards).join(','));
 
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
         alert("Yetkilendirme anahtarı bulunamadı.");
         setIsSubmitting(false);

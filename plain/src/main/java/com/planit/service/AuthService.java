@@ -4,6 +4,9 @@ import com.planit.model.User;
 import com.planit.model.dto.LoginRequest;
 import com.planit.model.dto.RegisterRequest; 
 import com.planit.repository.UserRepository;
+
+import java.util.HashSet;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,6 +39,7 @@ public class AuthService {
         newUser.setEmail(request.email());
         newUser.setPassword(passwordEncoder.encode(request.password()));
         newUser.setAvatarId("default-avatar");
+        newUser.setJoinedRooms(new HashSet<>());
 
 
         return userRepository.save(newUser);

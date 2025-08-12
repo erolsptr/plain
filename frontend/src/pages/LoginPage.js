@@ -23,6 +23,8 @@ function LoginPage({ onLogin }) {
     e.preventDefault();
     setError(null);
     setInfoMessage(null); // Giriş denemesi yapıldığında bilgi mesajını temizle
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
 
     try {
       const response = await fetch('/api/auth/login', {

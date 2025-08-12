@@ -1,31 +1,20 @@
 package com.planit.service;
 
-import com.planit.model.PokerRoom; // YENİ IMPORT
 import com.planit.model.User;
-import com.planit.repository.PokerRoomRepository; // YENİ IMPORT
 import com.planit.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Lazy; // YENİ IMPORT
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Set; // YENİ IMPORT
-import java.util.stream.Collectors; // YENİ IMPORT
 
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
 
     private final UserRepository userRepository;
-    private final PokerRoomRepository pokerRoomRepository;
     private final PasswordEncoder passwordEncoder;
-    
-    // Circular dependency'yi (döngüsel bağımlılık) çözmek için @Lazy anotasyonu
-    private final RoomService roomService;
 
-    // Helper method to find user by email
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
@@ -70,22 +59,5 @@ public class ProfileService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-    }
-
-    @Transactional
-    public void deleteAccount(String userEmail) {
-        User userToDelete = getUserByEmail(userEmail);
-
-        // 1. Kullanıcının sahip olduğu odaların bir kopyasını al (döngüde değişiklik yaparken sorun yaşamamak için)
-        Set<String> ownedRoomIds = userToDelete.getOwnedRooms().stream()
-                                    .map(PokerRoom::getId)
-                                    .collect(Collectors.toSet());
-
-        // 2. Sahip olduğu her bir odayı, RoomService'in kendi silme metodunu kullanarak sil.
-        // Bu, odaya bağlı tüm katılımcıları, görevleri ve oyları da temizler.
-        ownedRoomIds.forEach(roomId -> roomService.deleteRoom(roomId, userEmail));
-
-        // 3. Artık kullanıcıyla ilişkili hiçbir oda kalmadığına göre, kullanıcıyı güvenle sil.
-        userRepository.delete(userToDelete);
     }
 }
