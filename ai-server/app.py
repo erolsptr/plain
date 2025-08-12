@@ -4,12 +4,21 @@ import random
 import requests
 import google.generativeai as genai
 import json
+import os
+from dotenv import load_dotenv
+
+# Proje klasöründeki .env dosyasından ortam değişkenlerini yükle
+load_dotenv()
 
 app = Flask(__name__)
 
-# ÖNEMLİ GÜVENLİK UYARISI: Bu API anahtarını GitHub gibi halka açık yerlerde paylaşma.
-# Gerçek bir uygulamada, bunu bir ortam değişkeni (environment variable) olarak ayarlamak en iyisidir.
-GOOGLE_API_KEY = "key"
+# API Anahtarını ortam değişkeninden (environment variable) güvenli bir şekilde al
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Anahtarın yüklenip yüklenmediğini kontrol et. Yüklenmediyse, programı hata vererek durdur.
+if not GOOGLE_API_KEY:
+    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı. Lütfen ai-service klasöründeki .env dosyasını kontrol edin.")
+
 genai.configure(api_key=GOOGLE_API_KEY)
 
 JAVA_API_CALLBACK_URL = "http://localhost:8080/api/internal/ai-vote"
@@ -33,6 +42,7 @@ def get_ai_estimation(task_data):
         prompt = (
             "You are an expert software developer named 'plAIn' in a planning poker session. "
             "Your task is to provide an estimate for the new user story below. Follow these steps:\n"
+
             "1. **Break Down:** Deconstruct the new story into its core technical tasks (e.g., 'create API endpoint', 'update UI component', 'write database migration').\n"
             "2. **Analyze Complexity:** Briefly assess the complexity, risks, or unknowns for each technical task.\n"
             "3. **Estimate:** Based on your analysis and the team's past estimations provided below, choose the most suitable story point from the available options.\n"
