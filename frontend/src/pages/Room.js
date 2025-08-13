@@ -15,47 +15,68 @@ import '../Room.css';
 const SOCKET_URL = 'http://localhost:8080/ws-poker';
 const AI_PARTICIPANT_NAME = 'plAIn Asistanı';
 
+// --- YENİ getVoteResult FONKSİYONU ---
+// --- YENİ VE DÜZELTİLMİŞ getVoteResult FONKSİYONU ---
 const getVoteResult = (votes) => {
-    // 1. Oyları ve seçmenleri al
     const voteEntries = Object.entries(votes);
     if (!voteEntries.length) return null;
 
-    // 2. Her bir oy değerinin kaç kez verildiğini say
-    const voteCounts = voteEntries.reduce((acc, [voter, vote]) => {
+    // Özel bir yardımcı fonksiyon: '½' gibi değerleri 0.5'e çevirir.
+    const parseVoteValue = (voteString) => {
+        if (voteString === '½') {
+            return 0.5;
+        }
+        // Diğer tüm sayısal değerleri normal şekilde çevir.
+        const num = parseFloat(voteString);
+        return isNaN(num) ? null : num; // Sayı değilse null döndür.
+    };
+
+    // İnsanların verdiği sayısal oyları ayrı bir listede topla
+    const humanNumericVotes = voteEntries
+        .map(([voter, vote]) => {
+            // Sadece insan oylarını dikkate al
+            if (voter !== AI_PARTICIPANT_NAME) {
+                return parseVoteValue(vote);
+            }
+            return null;
+        })
+        .filter(vote => vote !== null); // Sayısal olmayanları (örn: '?', '☕') listeden çıkar
+
+    // Eğer hiç geçerli insan oyu yoksa, bir şey yapma
+    if (humanNumericVotes.length === 0) {
+        const aiVote = votes[AI_PARTICIPANT_NAME];
+        return aiVote ? { text: aiVote } : { text: "Oylama Yok" };
+    }
+
+    // İnsan oylarının sayımını yap
+    const voteCounts = humanNumericVotes.reduce((acc, vote) => {
         acc[vote] = (acc[vote] || 0) + 1;
         return acc;
     }, {});
 
-    // 3. En yüksek oy sayısını bul
     const maxCount = Math.max(...Object.values(voteCounts));
-
-    // 4. En yüksek sayıda oy alan tüm değerleri (kazananları) bul
     const winners = Object.keys(voteCounts).filter(vote => voteCounts[vote] === maxCount);
 
-    // 5. Eğer sadece bir kazanan varsa, doğrudan onu döndür
+    // Tek bir kazanan varsa, onu metin olarak döndür
+    // '0.5' sonucunu '½' olarak geri göstermeyi unutma
     if (winners.length === 1) {
-        return winners[0];
+        const winnerVote = winners[0];
+        return { text: winnerVote === '0.5' ? '½' : winnerVote };
     }
+
+    // Eşitlik durumunda ortalamayı hesapla
+    const sum = humanNumericVotes.reduce((a, b) => a + b, 0);
+    const average = sum / humanNumericVotes.length;
+    const roundedAverage = Math.round(average * 10) / 10;
     
-    // 6. EŞİTLİK DURUMU İÇİN YENİ MANTIK
-    if (winners.length > 1) {
-        // AI'ın oyunu bul
-        const aiVoteEntry = voteEntries.find(([voter, vote]) => voter === AI_PARTICIPANT_NAME);
-        const aiVoteValue = aiVoteEntry ? aiVoteEntry[1] : null;
-        
-        // Kazananlar listesinden AI'ın oyunu (eğer kazananlar arasındaysa) çıkar
-        const humanWinners = winners.filter(vote => vote !== aiVoteValue);
+    // Ortalamayı gösterirken de '0.5' yerine '½' kullanabiliriz (isteğe bağlı)
+    const averageText = roundedAverage === 0.5 ? '½' : roundedAverage.toString();
 
-        // Eğer AI'ın oyunu çıkarıldıktan sonra geriye TEK bir kazanan kalıyorsa, o insana ait oyu karar olarak kabul et
-        if (humanWinners.length === 1) {
-            return humanWinners[0];
-        }
-    }
-
-    // Yukarıdaki koşulların hiçbiri karşılanmazsa (örn: insanlar arasında da eşitlik varsa), anlaşma yoktur.
-    return "Anlaşma Yok";
+    return {
+        text: "Anlaşma Yok",
+        average: averageText
+    };
 };
-
 function Room({ user: currentUser }) {
   const { roomId } = useParams();
   const location = useLocation();
@@ -63,7 +84,7 @@ function Room({ user: currentUser }) {
   const [user, setUser] = useState(currentUser || location.state?.user);
   const [stompClient, setStompClient] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [roomOwner, setRoomOwner] = useState(null);
+  const [roomOwnerEmail, setRoomOwnerEmail] = useState(null);
   const [participants, setParticipants] = useState({});
   const [activeTask, setActiveTask] = useState({ title: 'Henüz bir görev belirlenmedi.', description: '', cardSet: '' });
   const [votes, setVotes] = useState({});
@@ -80,7 +101,6 @@ function Room({ user: currentUser }) {
   const [aiReasoning, setAiReasoning] = useState(null);
   const [isKickModalOpen, setIsKickModalOpen] = useState(false);
   const [userToKick, setUserToKick] = useState(null);
-  // Değişiklik 1: Yeni State Değişkeni
   const [activeParticipants, setActiveParticipants] = useState(new Set());
 
   const fetchTasks = useCallback(async () => {
@@ -123,7 +143,7 @@ function Room({ user: currentUser }) {
   }, [roomId]);
 
   useEffect(() => {
-    if (!user?.name) return;
+    if (!user?.name || !user?.email) return;
     
     fetchTasks();
 
@@ -136,12 +156,11 @@ function Room({ user: currentUser }) {
         setIsConnected(true);
         stateSub = client.subscribe(`/topic/room/${roomId}/state`, (message) => {
             const roomState = JSON.parse(message.body);
-            setRoomOwner(roomState.owner);
+            setRoomOwnerEmail(roomState.ownerEmail);
             setParticipants(roomState.participants || {});
             setActiveTask(roomState.activeTask || { title: 'Henüz bir görev belirlenmedi.', description: '', cardSet: '' });
             setVotes(roomState.votes || {});
             setAiReasoning(roomState.aiReasoning || null);
-            // Değişiklik 2: WebSocket Mesajını İşle
             setActiveParticipants(new Set(roomState.activeParticipants || []));
             setRevealVotes(false);
             setHasVoted(false);
@@ -164,7 +183,7 @@ function Room({ user: currentUser }) {
     };
   }, [user, roomId, fetchTasks]); 
 
-  const isModerator = user?.name === roomOwner;
+  const isModerator = user?.email === roomOwnerEmail;
   const allVotesIn = activeParticipants.size > 0 && activeParticipants.size === Object.keys(votes).length;
 
   const handleVote = (voteValue) => {
@@ -258,29 +277,28 @@ function Room({ user: currentUser }) {
                 <span>Oda Kodu: {roomId}</span>
                 <button onClick={handleCopyLink} className="copy-link-btn" title="Davet Linkini Kopyala">
                   {showCopyTooltip && <span className="copy-tooltip">Kopyalandı!</span>}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <svg xmlns="http://www.w.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 </button>
             </div>
           </div>
           <div>
             <h4>Katılımcılar ({Object.keys(votes).length}/{Object.keys(participants).length})</h4>
             <ul>
-  {Object.entries(participants).map(([name, avatarId]) => (
+  {Object.entries(participants).map(([name, participantData]) => (
     <li key={name}>
       <div className="participant-details">
         <div className="participant-avatar-container">
           <img 
-            src={`http://localhost:8080/avatars/${avatarId}.png`} 
+            src={`http://localhost:8080/avatars/${participantData.avatarId}.png`} 
             alt={`${name} avatar`}
-            className={`participant-avatar ${name === roomOwner ? 'moderator' : ''}`}
+            // E-postaları karşılaştırarak 'moderator' sınıfını ekliyoruz
+            className={`participant-avatar ${participantData.email === roomOwnerEmail ? 'moderator' : ''}`}
             onError={(e) => { e.target.onerror = null; e.target.src="http://localhost:8080/avatars/default-avatar.png" }}
           />
-          {/* YENİ: Durum göstergesi */}
           <div className={`status-indicator ${activeParticipants.has(name) ? 'active' : 'inactive'}`}></div>
-
-          {isModerator && name !== roomOwner && name !== AI_PARTICIPANT_NAME && (
+          {isModerator && user.name !== name && name !== AI_PARTICIPANT_NAME && (
             <button onClick={() => openKickConfirmModal(name)} className="kick-user-btn" title={`${name} kullanıcısını at`}>
-              <svg xmlns="http://www.w.3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           )}
         </div>
@@ -294,29 +312,38 @@ function Room({ user: currentUser }) {
   ))}
 </ul>
           </div>
+         {/* Tüm moderatör butonları için bir sarmalayıcı */}
+<div className="moderator-controls">
+  
+  {/* Oyları Göster Butonu */}
+  {isModerator && activeTask.title !== 'Henüz bir görev belirlenmedi.' && !revealVotes && (
+    <button onClick={handleRevealVotes} disabled={!allVotesIn} className="reveal-button side-panel-button">
+      Oyları Göster
+    </button>
+  )}
+  
+  {/* Oylar Gösterildikten Sonraki Butonlar */}
+  {revealVotes && isModerator && (
+    <div className="moderator-actions">
+      <button onClick={handleNewRound} className="reveal-button side-panel-button"> 
+        Yeni Tur Başlat
+      </button>
+      <button onClick={handleSaveResult} className="reveal-button side-panel-button primary"> 
+        Sonucu Kaydet
+      </button>
+    </div>
+  )}
+  
+  {/* Yeni Görev Ekle Butonu - YENİ YERİ */}
+  {isModerator && (
+      <button onClick={toggleTaskForm} className="reveal-button new-task-button side-panel-button"> 
+          {showTaskForm ? 'Formu Kapat' : 'Yeni Görev Ekle'}
+      </button>
+  )}
+
+</div>
           
-          {isModerator && activeTask.title !== 'Henüz bir görev belirlenmedi.' && !revealVotes && (
-            <button onClick={handleRevealVotes} disabled={!allVotesIn} className="reveal-button side-panel-button">
-              Oyları Göster
-            </button>
-          )}
           
-          {revealVotes && isModerator && (
-            <div className="moderator-actions">
-              <button onClick={handleNewRound} className="reveal-button side-panel-button"> 
-                Yeni Tur Başlat
-              </button>
-              <button onClick={handleSaveResult} className="reveal-button side-panel-button primary"> 
-                Sonucu Kaydet
-              </button>
-            </div>
-          )}
-          
-          {isModerator && (
-              <button onClick={toggleTaskForm} className="reveal-button new-task-button side-panel-button"> 
-                  {showTaskForm ? 'Formu Kapat' : 'Yeni Görev Ekle'}
-              </button>
-          )}
         </div>
         <div className="main-panel">
           <TaskDisplay task={activeTask} />
@@ -328,26 +355,24 @@ function Room({ user: currentUser }) {
                 <div className="results-container">
                     <h2>Oylama Sonuçları</h2>
                     <div className="results-grid">
-                      {/* Önce Karar Oyu Kartını render et */}
                       {consensus && (
-                        <RevealedCard 
-                          isConsensus={true} 
-                          consensusValue={consensus} 
-                        />
-                      )}
+  <RevealedCard 
+    isConsensus={true} 
+    consensusValue={consensus.text} // Ana metin
+    consensusAverage={consensus.average} // Ortalama (varsa)
+  />
+)}
                       
-                      {/* Sonra diğer tüm oyları render et */}
                       {Object.entries(votes).map(([name, vote]) => (
                         <RevealedCard
                           key={name}
                           name={name}
                           vote={vote}
-                          avatarId={participants[name]} // Katılımcı avatarını gönder
+                          avatarId={participants[name]?.avatarId}
                           isAI={name === AI_PARTICIPANT_NAME}
                         />
                       ))}
                     </div>
-                    {/* AI Gerekçesi kutusu hala aynı */}
                     {aiReasoning && (
                       <div className="ai-reasoning-box">
                         <h4>{AI_PARTICIPANT_NAME}'ın Düşüncesi</h4>

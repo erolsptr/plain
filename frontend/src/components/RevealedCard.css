@@ -111,6 +111,7 @@
 
 
 /* Karar Oyu Kartı (Kral/Kraliçe) */
+
 .consensus-card {
   width: 150px;
   height: 220px;
@@ -122,17 +123,32 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  color: #78350f; /* Koyu kahve/altın rengi */
+  color: #78350f;
+  padding: 10px;
+  box-sizing: border-box;
+  text-align: center;
 }
-.consensus-label {
-  font-size: 1rem;
-  font-weight: 600;
-}
-.consensus-value {
+
+/* BÜYÜK SAYI STİLİ: Anlaşma olduğunda kullanılacak */
+.consensus-value-large {
   font-size: 4.5rem;
   font-weight: 800;
   line-height: 1;
 }
+
+/* KÜÇÜK YAZI STİLİ: "Anlaşma Yok" için kullanılacak */
+.consensus-value-small {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.consensus-average {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
 .consensus-icon {
   font-size: 1.5rem;
   margin-top: 5px;

@@ -7,9 +7,8 @@ import java.util.Set;
 @Data
 public class RoomState {
 
-    private String owner;
-    private Map<String, String> participants; 
-    private Task activeTask;
+    private String ownerEmail;
+    private Map<String, Map<String, String>> participants;    private Task activeTask;
     private Map<String, String> votes;
     private boolean areVotesRevealed;
     private String aiReasoning;

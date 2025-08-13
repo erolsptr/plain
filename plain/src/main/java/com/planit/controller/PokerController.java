@@ -3,8 +3,10 @@ package com.planit.controller;
 import com.planit.model.Message;
 import com.planit.model.RoomState;
 import com.planit.model.Task;
+import com.planit.model.User;
 import com.planit.model.dto.AIVoteRequest;
 import com.planit.model.dto.TaskCreationRequest;
+import com.planit.repository.UserRepository;
 import com.planit.service.RoomService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +43,14 @@ public class PokerController {
     private RoomService roomService;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/api/rooms")
     public ResponseEntity<Map<String, String>> createRoom(Authentication authentication) {
         String ownerEmail = authentication.getName();
-        //String ownerEmail = "erol@example.com";
         String newRoomId = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         roomService.createRoom(newRoomId, ownerEmail);
         return ResponseEntity.ok(Map.of("roomId", newRoomId));
@@ -128,24 +132,25 @@ public class PokerController {
 
     // --- WebSocket Mesaj Eşlemeleri ---
     @MessageMapping("/room/{roomId}/register")
-    public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor) {
-        String username = joinMessage.getSender();
-        roomService.addUserToRoom(roomId, username);
-        headerAccessor.getSessionAttributes().put("username", username);
-        // YENİ SATIR: Hangi odada olduğunu oturuma kaydet
+    public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor, Principal principal) {
+        String userEmail = principal.getName();
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + userEmail));
+        
+        roomService.addUserToRoom(roomId, user.getName());
+        headerAccessor.getSessionAttributes().put("username", user.getName());
         headerAccessor.getSessionAttributes().put("roomId", roomId);
         publishFullRoomState(roomId);
     }
 
     @MessageMapping("/room/{roomId}/set-task")
-    public void setTask(@DestinationVariable String roomId, @Payload Task task, SimpMessageHeaderAccessor headerAccessor, Principal principal) {
-        String requesterName = (String) headerAccessor.getSessionAttributes().get("username");
-        String ownerName = roomService.getRoomOwner(roomId);
-        if (ownerName == null || !ownerName.equals(requesterName)) {
+    public void setTask(@DestinationVariable String roomId, @Payload Task task, Principal principal) {
+        String requesterEmail = principal.getName();
+        String ownerEmail = roomService.getRoomOwnerEmail(roomId);
+
+        if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
+            logger.warn("Yetkisiz görev başlatma denemesi. Oda Sahibi E-postası: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
             return;
         }
-
-        String requesterEmail = principal.getName();
         
         roomService.setActiveTask(roomId, task, requesterEmail);
     }
@@ -159,20 +164,24 @@ public class PokerController {
     }
 
     @MessageMapping("/room/{roomId}/reveal")
-    public void revealVotes(@DestinationVariable String roomId, @Payload Message revealMessage) {
-        String requester = revealMessage.getSender();
-        String owner = roomService.getRoomOwner(roomId);
-        if (owner == null || !owner.equals(requester)) {
+    public void revealVotes(@DestinationVariable String roomId, Principal principal) {
+        String requesterEmail = principal.getName();
+        String ownerEmail = roomService.getRoomOwnerEmail(roomId);
+
+        if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
+            logger.warn("Yetkisiz oyları gösterme denemesi. Oda Sahibi E-postası: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
             return;
         }
         messagingTemplate.convertAndSend("/topic/room/" + roomId + "/reveal", Map.of("reveal", true));
     }
     
     @MessageMapping("/room/{roomId}/new-round")
-    public void newRound(@DestinationVariable String roomId, @Payload Message newRoundMessage) {
-        String requester = newRoundMessage.getSender();
-        String owner = roomService.getRoomOwner(roomId);
-        if (owner == null || !owner.equals(requester)) {
+    public void newRound(@DestinationVariable String roomId, Principal principal) {
+        String requesterEmail = principal.getName();
+        String ownerEmail = roomService.getRoomOwnerEmail(roomId);
+
+        if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
+             logger.warn("Yetkisiz yeni tur başlatma denemesi. Oda Sahibi E-postası: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
             return;
         }
         roomService.startNewRound(roomId);
@@ -180,33 +189,32 @@ public class PokerController {
     }
 
     @MessageMapping("/room/{roomId}/kick")
-    public void kickUser(@DestinationVariable String roomId, @Payload Message kickMessage) {
-        String requesterName = kickMessage.getSender();
+    public void kickUser(@DestinationVariable String roomId, @Payload Message kickMessage, Principal principal) {
+        String requesterEmail = principal.getName();
         String userToKick = kickMessage.getContent();
 
-        String ownerName = roomService.getRoomOwner(roomId);
-        if (ownerName == null || !ownerName.equals(requesterName)) {
-            logger.warn("Yetkisiz kullanıcı atma denemesi. Odaya Sahibi: {}, İstek Yapan: {}", ownerName, requesterName);
+        String ownerEmail = roomService.getRoomOwnerEmail(roomId);
+        if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
+            logger.warn("Yetkisiz kullanıcı atma denemesi. Oda Sahibi E-postası: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
             return;
         }
 
-        logger.info("Oda sahibi '{}', '{}' kullanıcısını {} odasından atıyor.", requesterName, userToKick, roomId);
+        logger.info("Oda sahibi (e-posta: {}), '{}' kullanıcısını {} odasından atıyor.", requesterEmail, userToKick, roomId);
         roomService.kickUserFromRoom(roomId, userToKick);
         
         publishFullRoomState(roomId);
     }
 
     public void publishFullRoomState(String roomId) {
-    RoomState currentRoomState = new RoomState();
-    currentRoomState.setOwner(roomService.getRoomOwner(roomId));
-    currentRoomState.setParticipants(roomService.getParticipantsWithAvatars(roomId));
-    // YENİ SATIR: Aktif katılımcı listesini ekle
-    currentRoomState.setActiveParticipants(roomService.getActiveParticipants(roomId));
-    currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
-    currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
-    currentRoomState.setAreVotesRevealed(false);
-    currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
-    
-    messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
-}
+        RoomState currentRoomState = new RoomState();
+        currentRoomState.setOwnerEmail(roomService.getRoomOwnerEmail(roomId));
+        currentRoomState.setParticipants(roomService.getParticipantsWithAvatars(roomId));
+        currentRoomState.setActiveParticipants(roomService.getActiveParticipants(roomId));
+        currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
+        currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
+        currentRoomState.setAreVotesRevealed(false);
+        currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
+        
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
+    }
 }

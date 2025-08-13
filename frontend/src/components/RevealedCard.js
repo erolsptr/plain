@@ -21,14 +21,25 @@ const getCardSuit = (value) => {
 };
 
 // Bu bileşen, gösterilen her bir sonuç kartını temsil edecek
-function RevealedCard({ name, vote, avatarId, isAI, isConsensus, consensusValue }) {
+function RevealedCard({ name, vote, avatarId, isAI, isConsensus, consensusValue, consensusAverage }) {
   
-  // Karar Oyu kartı için özel mantık
   if (isConsensus) {
+    // consensusAverage prop'unun varlığı, bir anlaşmazlık olduğunu gösterir.
+    const isTie = !!consensusAverage;
+
     return (
       <div className="revealed-card consensus-card">
-        <div className="consensus-label">Karar Oyu</div>
-        <div className="consensus-value">{consensusValue}</div>
+        
+        {/* Koşullu olarak doğru CSS sınıfını ata */}
+        <div className={isTie ? "consensus-value-small" : "consensus-value-large"}>
+          {consensusValue}
+        </div>
+        
+        {/* Sadece isTie true ise ortalamayı göster */}
+        {isTie && (
+          <div className="consensus-average">(Ortalama: {consensusAverage})</div>
+        )}
+        
         <div className="consensus-icon">👑</div>
       </div>
     );

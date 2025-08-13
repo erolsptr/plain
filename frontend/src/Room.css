@@ -850,3 +850,25 @@
   padding: 5px 10px;
   border-radius: 5px;
 }
+/* Room.css'in en sonuna eklenecek */
+
+/* Moderatör butonlarını saran ana konteyner */
+.moderator-controls {
+  display: flex;
+  flex-direction: column; /* Butonları dikey olarak hizala */
+  gap: 10px; /* Butonlar arasına 10px boşluk koy */
+  margin-top: 20px; /* Üstündeki katılımcı listesinden ayırmak için */
+  padding-top: 20px; /* Üstüne bir de çizgi çekelim */
+  border-top: 1px solid var(--border-color);
+}
+
+/* Oylar gösterildikten sonraki "Yeni Tur" ve "Kaydet" butonlarını yan yana getirir */
+.moderator-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.moderator-actions button {
+  flex-grow: 1; /* Butonların mevcut alanı eşit paylaşmasını sağlar */
+}
