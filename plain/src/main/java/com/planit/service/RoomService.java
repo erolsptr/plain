@@ -5,6 +5,7 @@ import com.planit.model.PokerRoom;
 import com.planit.model.Task;
 import com.planit.model.User;
 import com.planit.model.Vote;
+import com.planit.model.VoteData;
 import com.planit.model.dto.TaskCreationRequest;
 import com.planit.repository.AIVoteRepository;
 import com.planit.repository.PokerRoomRepository;
@@ -55,27 +56,36 @@ public class RoomService {
 
     private final Map<String, Set<String>> rooms = new ConcurrentHashMap<>();
     private final Map<String, Task> activeTasks = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, String>> roomVotes = new ConcurrentHashMap<>();
-    // DEĞİŞİKLİK: Artık oda sahibinin adını değil, e-postasını saklayacağız.
+    private final Map<String, Map<String, VoteData>> roomVotes = new ConcurrentHashMap<>();
     private final Map<String, String> roomOwnerEmails = new ConcurrentHashMap<>();
     private final Map<String, String> aiReasonings = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> activeUsersByRoom = new ConcurrentHashMap<>();
+    // YENİ: Oylamanın başlangıç zamanını (timestamp) tutacak harita
+    private final Map<String, Long> votingStartTimes = new ConcurrentHashMap<>();
 
     @Transactional
     public void addUserToRoom(String roomId, String username) {
         synchronized (this) {
-            if (!rooms.containsKey(roomId)) {
-                logger.info("Oda hafızada bulunamadı (ID: {}), veritabanından yeniden canlandırılıyor...", roomId);
-                pokerRoomRepository.findById(roomId).ifPresent(room -> {
-                    Set<String> participants = room.getParticipants().stream()
-                            .map(User::getName)
-                            .collect(Collectors.toSet());
-                    participants.add(AI_PARTICIPANT_NAME);
-                    rooms.put(roomId, participants);
-                    logger.info("Oda (ID: {}) {} katılımcı ile yeniden canlandırıldı.", roomId, participants.size());
-                });
+    if (!rooms.containsKey(roomId)) {
+        logger.info("Oda hafızada bulunamadı (ID: {}), veritabanından yeniden canlandırılıyor...", roomId);
+        pokerRoomRepository.findById(roomId).ifPresent(room -> {
+            // Oda katılımcılarının isimlerini hafızaya al
+            Set<String> participants = room.getParticipants().stream()
+                    .map(User::getName)
+                    .collect(Collectors.toSet());
+            participants.add(AI_PARTICIPANT_NAME);
+            rooms.put(roomId, participants);
+
+            // EN ÖNEMLİ EKLEME: Odanın sahibinin e-postasını da hafızaya al!
+            if (room.getOwner() != null) {
+                roomOwnerEmails.put(roomId, room.getOwner().getEmail());
+                logger.info("Oda sahibi ({}) {} ID'li oda için hafızaya alındı.", room.getOwner().getEmail(), roomId);
             }
-        }
+            
+            logger.info("Oda (ID: {}) {} katılımcı ile yeniden canlandırıldı.", roomId, participants.size());
+        });
+    }
+}
         
         rooms.computeIfAbsent(roomId, k -> new HashSet<>()).add(username);
         activeUsersByRoom.computeIfAbsent(roomId, k -> new HashSet<>()).add(username);
@@ -90,48 +100,49 @@ public class RoomService {
     }
     
     @Transactional
-    public void kickUserFromRoom(String roomId, String usernameToKick) {
-        Set<String> participantsInMemory = rooms.get(roomId);
-        if (participantsInMemory != null) {
-            participantsInMemory.remove(usernameToKick);
-        }
-        Set<String> activeParticipants = activeUsersByRoom.get(roomId);
-        if (activeParticipants != null) {
-            activeParticipants.remove(usernameToKick);
-        }
-
-        Map<String, String> votesInMemory = roomVotes.get(roomId);
-        if (votesInMemory != null) {
-            votesInMemory.remove(usernameToKick);
-        }
-
-        PokerRoom room = pokerRoomRepository.findById(roomId)
-            .orElseThrow(() -> new RuntimeException("Kullanıcı atılacak oda bulunamadı: " + roomId));
-        User userToKick = userRepository.findByName(usernameToKick)
-            .orElseThrow(() -> new RuntimeException("Atılacak kullanıcı bulunamadı: " + usernameToKick));
-            
-        room.removeParticipant(userToKick);
-        pokerRoomRepository.save(room);
+public void kickUserFromRoom(String roomId, String usernameToKick) {
+    // Hem genel hem de aktif listelerden sil
+    Set<String> participantsInMemory = rooms.get(roomId);
+    if (participantsInMemory != null) {
+        participantsInMemory.remove(usernameToKick);
     }
+    Set<String> activeParticipants = activeUsersByRoom.get(roomId);
+    if (activeParticipants != null) {
+        activeParticipants.remove(usernameToKick);
+    }
+
+    
+    Map<String, VoteData> votesInMemory = roomVotes.get(roomId);
+    if (votesInMemory != null) {
+        votesInMemory.remove(usernameToKick);
+    }
+
+    PokerRoom room = pokerRoomRepository.findById(roomId)
+        .orElseThrow(() -> new RuntimeException("Kullanıcı atılacak oda bulunamadı: " + roomId));
+    User userToKick = userRepository.findByName(usernameToKick)
+        .orElseThrow(() -> new RuntimeException("Atılacak kullanıcı bulunamadı: " + usernameToKick));
+        
+    room.removeParticipant(userToKick);
+    pokerRoomRepository.save(room);
+}
 
     public void removeUserFromRoom(String roomId, String username) {
-        logger.info("'{}' kullanıcısı {} odasından ayrıldı (bağlantı koptu).", username, roomId);
-        Set<String> activeParticipants = activeUsersByRoom.get(roomId);
-        if (activeParticipants != null) {
-            activeParticipants.remove(username);
-        }
-        
-        Map<String, String> votesInMemory = roomVotes.get(roomId);
-        if (votesInMemory != null) {
-            votesInMemory.remove(username);
-        }
+    logger.info("'{}' kullanıcısı {} odasından ayrıldı (bağlantı koptu).", username, roomId);
+    Set<String> activeParticipants = activeUsersByRoom.get(roomId);
+    if (activeParticipants != null) {
+        activeParticipants.remove(username);
     }
+    
+    // DEĞİŞİKLİK: Burası da kickUserFromRoom ile aynı mantıkta çalışır.
+    Map<String, VoteData> votesInMemory = roomVotes.get(roomId);
+    if (votesInMemory != null) {
+        votesInMemory.remove(username);
+    }
+}
 
     public Set<String> getUsersInRoom(String roomId) {
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
-
-
 
     public Set<String> getActiveParticipants(String roomId) {
         Set<String> active = new HashSet<>(activeUsersByRoom.getOrDefault(roomId, Collections.emptySet()));
@@ -139,57 +150,61 @@ public class RoomService {
         return active;
     }
 
-// --- YUKARIDAKİ BLOKLA BUNU DEĞİŞTİR ---
-@Transactional
-public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId) {
-    Set<String> participantNames = rooms.getOrDefault(roomId, Collections.emptySet());
-    if (participantNames.isEmpty()) {
-        return Collections.emptyMap();
+    @Transactional
+    public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId) {
+        Set<String> participantNames = rooms.getOrDefault(roomId, Collections.emptySet());
+        if (participantNames.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        Set<String> humanNames = participantNames.stream()
+                .filter(name -> !name.equals(AI_PARTICIPANT_NAME))
+                .collect(Collectors.toSet());
+        
+        Map<String, Map<String, String>> participantsMap = new HashMap<>();
+        if (!humanNames.isEmpty()) {
+            participantsMap = userRepository.findByNameIn(humanNames).stream()
+                .collect(Collectors.toMap(
+                    User::getName, 
+                    user -> Map.of(
+                        "avatarId", user.getAvatarId(),
+                        "email", user.getEmail()
+                    )
+                ));
+        }
+        
+        participantsMap.put(AI_PARTICIPANT_NAME, Map.of(
+            "avatarId", "bot",
+            "email", "ai@plain.com"
+        ));
+        
+        return participantsMap;
     }
-    
-    Set<String> humanNames = participantNames.stream()
-            .filter(name -> !name.equals(AI_PARTICIPANT_NAME))
-            .collect(Collectors.toSet());
-    
-    Map<String, Map<String, String>> participantsMap = new HashMap<>();
-    if (!humanNames.isEmpty()) {
-        participantsMap = userRepository.findByNameIn(humanNames).stream()
-            .collect(Collectors.toMap(
-                User::getName, // Anahtar: Kullanıcı Adı
-                user -> Map.of( // Değer: Avatar ve E-posta içeren bir Map
-                    "avatarId", user.getAvatarId(),
-                    "email", user.getEmail()
-                )
-            ));
-    }
-    
-    // AI için de aynı yapıyı kullanalım
-    participantsMap.put(AI_PARTICIPANT_NAME, Map.of(
-        "avatarId", "bot",
-        "email", "ai@plain.com" // Benzersiz bir e-posta
-    ));
-    
-    return participantsMap;
-}
 
     public Task getActiveTask(String roomId) {
         return activeTasks.get(roomId);
     }
 
-    public void recordVote(String roomId, String username, String vote) {
-        roomVotes.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(username.trim(), vote);
+    // YENİ: Oylama başlangıç zamanını döndüren metot
+    public Long getVotingStartTime(String roomId) {
+        return votingStartTimes.get(roomId);
     }
 
+    public void recordVote(String roomId, String username, String vote, Long durationMs) {
+    VoteData voteData = new VoteData(vote, durationMs);
+    roomVotes.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(username.trim(), voteData);
+}
+
     public void recordAIVote(String roomId, String voterName, String voteValue, String reasoning) {
-        recordVote(roomId, voterName, voteValue);
+        recordVote(roomId, voterName, voteValue, null); // AI için süre null olabilir
         if (reasoning != null && !reasoning.isEmpty()) {
             aiReasonings.put(roomId, reasoning);
         }
     }
 
-    public Map<String, String> getVotes(String roomId) {
-        return roomVotes.get(roomId);
-    }
+    public Map<String, VoteData> getVotes(String roomId) {
+    return roomVotes.get(roomId);
+}
     
     public String getAIReasoning(String roomId) {
         return aiReasonings.get(roomId);
@@ -200,16 +215,19 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
             roomVotes.get(roomId).clear();
         }
         aiReasonings.remove(roomId);
+        // DEĞİŞİKLİK: Oylar temizlendiğinde sayacı da sıfırla.
+        votingStartTimes.remove(roomId);
     }
     
     private void clearHumanVotes(String roomId) {
-        Map<String, String> votes = roomVotes.get(roomId);
-        if (votes != null) {
-            votes.entrySet().removeIf(entry -> !entry.getKey().equals(AI_PARTICIPANT_NAME));
-        }
+    // DEĞİŞİKLİK: Haritanın tipi VoteData olarak güncellendi.
+    Map<String, VoteData> votes = roomVotes.get(roomId);
+    if (votes != null) {
+        // Mantık aynı kalıyor: Anahtarı (kullanıcı adı) AI_PARTICIPANT_NAME olmayanları sil.
+        votes.entrySet().removeIf(entry -> !entry.getKey().equals(AI_PARTICIPANT_NAME));
     }
+}
 
-    // DEĞİŞİKLİK: Metodun adı ve dönüş tipi daha anlamlı hale getirildi. Artık sahibin E-POSTASINI döndürüyor.
     @Transactional
     public String getRoomOwnerEmail(String roomId) {
         String ownerEmail = roomOwnerEmails.get(roomId);
@@ -220,10 +238,10 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
         return pokerRoomRepository.findById(roomId)
             .map(room -> {
                 String email = room.getOwner().getEmail();
-                roomOwnerEmails.put(roomId, email); // Hafızaya al
+                roomOwnerEmails.put(roomId, email);
                 return email;
             })
-            .orElse(null); // Oda bulunamazsa null dön
+            .orElse(null);
     }
 
     @Transactional
@@ -254,53 +272,65 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
         }).sorted(Comparator.comparing((Map<String, Object> m) -> (Long)m.get("completionOrder")).reversed()).collect(Collectors.toList());
     }
 
-    @Transactional
-    public void saveCurrentVotingResult(String roomId, String requesterEmail) {
-        User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
-        // DEĞİŞİKLİK: Artık sahibin e-postasını alıp, isteği yapanın e-postasıyla karşılaştırıyoruz.
-        String ownerEmail = getRoomOwnerEmail(roomId);
-        if (ownerEmail == null || !requester.getEmail().equals(ownerEmail)) {
-            throw new AccessDeniedException("Sadece oda sahibi sonuçları kaydedebilir.");
-        }
-        
-        Task currentTask = getActiveTask(roomId);
-        Map<String, String> currentVotes = getVotes(roomId);
-        if (currentTask == null || currentTask.getId() == null || currentVotes == null || currentVotes.isEmpty()) {
-            activeTasks.remove(roomId);
-            clearAllVotes(roomId);
-            return;
-        }
-        List<Vote> humanVotesToSave = new ArrayList<>();
-        for (Map.Entry<String, String> entry : currentVotes.entrySet()) {
-            String userName = entry.getKey();
-            String voteValue = entry.getValue();
-            if (userName.equals(AI_PARTICIPANT_NAME)) {
-                AIVote aiVote = new AIVote();
-                aiVote.setVoteValue(voteValue);
-                aiVote.setReasoning(getAIReasoning(roomId));
-                aiVote.setTask(currentTask);
-                aiVoteRepository.save(aiVote);
-            } else {
-                User voter = userRepository.findByName(userName).orElseThrow(() -> new RuntimeException("DB'de '" + userName + "' adında kullanıcı bulunamadı."));
-                Vote vote = new Vote();
-                vote.setUser(voter);
-                vote.setVoteValue(voteValue);
-                vote.setTask(currentTask);
-                humanVotesToSave.add(vote);
-            }
-        }
-        if (!humanVotesToSave.isEmpty()) {
-            voteRepository.saveAll(humanVotesToSave);
-        }
+    // --- BU METODU GÜNCELLE ---
+// --- BU METODU YENİSİYLE DEĞİŞTİR ---
+@Transactional
+public void saveCurrentVotingResult(String roomId, String requesterEmail) {
+    // Adım 1: İsteği yapan kullanıcıyı bul.
+    User requester = userRepository.findByEmail(requesterEmail)
+            .orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
+
+    // Adım 2: Odayı ve SAHİP BİLGİSİNİ doğrudan veritabanından çek.
+    PokerRoom room = pokerRoomRepository.findById(roomId)
+            .orElseThrow(() -> new RuntimeException("Sonuçların kaydedileceği oda bulunamadı: " + roomId));
+
+    // Adım 3: Yetki kontrolünü, hafızaya değil, DOĞRUDAN veritabanından gelen obje üzerinden yap.
+    if (room.getOwner() == null || !room.getOwner().getEmail().equals(requesterEmail)) {
+        throw new AccessDeniedException("Sadece oda sahibi sonuçları kaydedebilir.");
+    }
+    
+    // --- Metodun geri kalanında hiçbir değişiklik yok, aynı mantıkla çalışır ---
+    Task currentTask = getActiveTask(roomId);
+    Map<String, VoteData> currentVotes = getVotes(roomId);
+    
+    if (currentTask == null || currentTask.getId() == null || currentVotes == null || currentVotes.isEmpty()) {
         activeTasks.remove(roomId);
         clearAllVotes(roomId);
+        return;
     }
+
+    List<Vote> humanVotesToSave = new ArrayList<>();
+    for (Map.Entry<String, VoteData> entry : currentVotes.entrySet()) {
+        String userName = entry.getKey();
+        VoteData voteData = entry.getValue();
+        String voteValue = voteData.getVoteValue();
+
+        if (userName.equals(AI_PARTICIPANT_NAME)) {
+            AIVote aiVote = new AIVote();
+            aiVote.setVoteValue(voteValue);
+            aiVote.setReasoning(getAIReasoning(roomId));
+            aiVote.setTask(currentTask);
+            aiVoteRepository.save(aiVote);
+        } else {
+            User voter = userRepository.findByName(userName).orElseThrow(() -> new RuntimeException("DB'de '" + userName + "' adında kullanıcı bulunamadı."));
+            Vote vote = new Vote();
+            vote.setUser(voter);
+            vote.setVoteValue(voteValue);
+            vote.setTask(currentTask);
+            humanVotesToSave.add(vote);
+        }
+    }
+    if (!humanVotesToSave.isEmpty()) {
+        voteRepository.saveAll(humanVotesToSave);
+    }
+    activeTasks.remove(roomId);
+    clearAllVotes(roomId);
+}
     
     @Transactional
     public void deleteRoom(String roomId, String requesterEmail) {
         User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
         PokerRoom roomToDelete = pokerRoomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Silinecek oda bulunamadı: " + roomId));
-        // DEĞİŞİKLİK: Artık sahibin e-postasını alıp, isteği yapanın e-postasıyla karşılaştırıyoruz.
         if (!requester.getEmail().equals(roomToDelete.getOwner().getEmail())) {
             throw new AccessDeniedException("Bu odayı silme yetkiniz yok.");
         }
@@ -311,13 +341,13 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
         }
         pokerRoomRepository.deleteById(roomId);
         
-        // Hafızadaki tüm ilgili verileri temizle
         rooms.remove(roomId);
         activeUsersByRoom.remove(roomId);
         activeTasks.remove(roomId);
         roomVotes.remove(roomId);
-        roomOwnerEmails.remove(roomId); // DEĞİŞİKLİK: roomOwners yerine roomOwnerEmails'i temizle
+        roomOwnerEmails.remove(roomId);
         aiReasonings.remove(roomId);
+        votingStartTimes.remove(roomId);
     }
 
     @Transactional
@@ -331,7 +361,6 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
         newRoom.addParticipant(owner);
         pokerRoomRepository.save(newRoom);
         
-        // DEĞİŞİKLİK: Oda oluşturulur oluşturulmaz sahibinin e-postasını hafızaya al.
         roomOwnerEmails.put(roomId, owner.getEmail());
     }
 
@@ -339,7 +368,6 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
     public Task createTask(String roomId, TaskCreationRequest taskRequest, String requesterEmail) {
         PokerRoom room = pokerRoomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Görev eklenecek oda bulunamadı: " + roomId));
         User requester = userRepository.findByEmail(requesterEmail).orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
-        // DEĞİŞİKLİK: Burada ID ile karşılaştırma yapmak zaten doğru ve daha güvenli. Değişiklik yok.
         if (!room.getOwner().getId().equals(requester.getId())) {
             throw new AccessDeniedException("Sadece oda sahibi yeni görev oluşturabilir.");
         }
@@ -376,6 +404,10 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
         Task taskToActivate = (task.getId() == null) ? taskRepository.save(task) : task;
         activeTasks.put(roomId, taskToActivate); 
         clearAllVotes(roomId);
+        
+        // YENİ: Oylama başladığı anın zaman damgasını kaydet.
+        votingStartTimes.put(roomId, System.currentTimeMillis());
+        
         triggerAIEstimation(roomId, taskToActivate, requesterEmail);
     }
 
@@ -394,10 +426,10 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
                 "consensusScore", (String) historyItem.get("consensusScore")
             ))
             .collect(Collectors.toList());
-            final int HISTORY_LIMIT = 10; // AI'a gönderilecek maksimum geçmiş görev sayısı
-    if (simplifiedHistory.size() > HISTORY_LIMIT) {
-        simplifiedHistory = simplifiedHistory.subList(0, HISTORY_LIMIT);
-    }
+        final int HISTORY_LIMIT = 10;
+        if (simplifiedHistory.size() > HISTORY_LIMIT) {
+            simplifiedHistory = simplifiedHistory.subList(0, HISTORY_LIMIT);
+        }
         logger.info("Triggering AI estimation for task: {} in room: {}. Including {} history items.", task.getId(), roomId, simplifiedHistory.size());
         Map<String, Object> payload = new HashMap<>();
         payload.put("roomId", roomId);
@@ -418,31 +450,30 @@ public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId
     }
 
    @Transactional
-public Set<Map<String, String>> findRoomsByUserEmail(String userEmail) {
-    // 1. Önce e-postadan kullanıcının GERÇEK ID'sini bul.
-    User user = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userEmail));
-    Long userId = user.getId();
-
-    // 2. Sadece ve sadece bu ID'yi kullanarak odaları bul.
-    Set<PokerRoom> userRooms = pokerRoomRepository.findRoomsByParticipantId(userId);
-
-    // 3. Sonucu işle.
-    return userRooms.stream()
-            .map(room -> {
-                String ownerName = (room.getOwner() != null) ? room.getOwner().getName() : "Bilinmiyor";
-                return Map.of(
-                        "roomId", room.getId(),
-                        "ownerName", ownerName,
-                        "taskCount", String.valueOf(room.getTasks().size())
-                );
-            })
-            .collect(Collectors.toSet());
-}
+    public Set<Map<String, String>> findRoomsByUserEmail(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userEmail));
+        Long userId = user.getId();
+        Set<PokerRoom> userRooms = pokerRoomRepository.findRoomsByParticipantId(userId);
+        return userRooms.stream()
+                .map(room -> {
+                    String ownerName = (room.getOwner() != null) ? room.getOwner().getName() : "Bilinmiyor";
+                    return Map.of(
+                            "roomId", room.getId(),
+                            "ownerName", ownerName,
+                            "taskCount", String.valueOf(room.getTasks().size())
+                    );
+                })
+                .collect(Collectors.toSet());
+    }
 
     @Transactional
     public void startNewRound(String roomId) {
         clearHumanVotes(roomId);
+        
+        // YENİ: Yeni tur başladığında sayacı da yeniden başlat.
+        votingStartTimes.put(roomId, System.currentTimeMillis());
+        
         Task currentTask = getActiveTask(roomId);
         if (currentTask != null) {
             PokerRoom room = pokerRoomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Oda veritabanında bulunamadı: " + roomId));

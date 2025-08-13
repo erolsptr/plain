@@ -15,40 +15,40 @@ import '../Room.css';
 const SOCKET_URL = 'http://localhost:8080/ws-poker';
 const AI_PARTICIPANT_NAME = 'plAIn Asistanı';
 
-// --- YENİ getVoteResult FONKSİYONU ---
-// --- YENİ VE DÜZELTİLMİŞ getVoteResult FONKSİYONU ---
+// Room.js dosyasının en üstündeki fonksiyonu bununla değiştir
+
 const getVoteResult = (votes) => {
+    // votes objesi artık { 'Erol': { voteValue: '5', durationMs: 123 }, ... } formatında
     const voteEntries = Object.entries(votes);
     if (!voteEntries.length) return null;
 
-    // Özel bir yardımcı fonksiyon: '½' gibi değerleri 0.5'e çevirir.
     const parseVoteValue = (voteString) => {
-        if (voteString === '½') {
-            return 0.5;
-        }
-        // Diğer tüm sayısal değerleri normal şekilde çevir.
+        if (voteString === '½') return 0.5;
         const num = parseFloat(voteString);
-        return isNaN(num) ? null : num; // Sayı değilse null döndür.
+        return isNaN(num) ? null : num;
     };
+    
+    // YENİ MANTIK: Gelen 'votes' objesinin değerlerinden (yani {voteValue, durationMs} objelerinden) 
+    // voteValue'ları alarak yeni bir basit 'oy -> sayı' haritası oluştur.
+    const simplifiedVotes = {};
+    voteEntries.forEach(([voter, voteData]) => {
+        simplifiedVotes[voter] = voteData.voteValue;
+    });
 
-    // İnsanların verdiği sayısal oyları ayrı bir listede topla
-    const humanNumericVotes = voteEntries
+    const humanNumericVotes = Object.entries(simplifiedVotes)
         .map(([voter, vote]) => {
-            // Sadece insan oylarını dikkate al
             if (voter !== AI_PARTICIPANT_NAME) {
                 return parseVoteValue(vote);
             }
             return null;
         })
-        .filter(vote => vote !== null); // Sayısal olmayanları (örn: '?', '☕') listeden çıkar
+        .filter(vote => vote !== null);
 
-    // Eğer hiç geçerli insan oyu yoksa, bir şey yapma
     if (humanNumericVotes.length === 0) {
-        const aiVote = votes[AI_PARTICIPANT_NAME];
-        return aiVote ? { text: aiVote } : { text: "Oylama Yok" };
+        const aiVoteData = votes[AI_PARTICIPANT_NAME];
+        return aiVoteData ? { text: aiVoteData.voteValue } : { text: "Oylama Yok" };
     }
 
-    // İnsan oylarının sayımını yap
     const voteCounts = humanNumericVotes.reduce((acc, vote) => {
         acc[vote] = (acc[vote] || 0) + 1;
         return acc;
@@ -57,19 +57,14 @@ const getVoteResult = (votes) => {
     const maxCount = Math.max(...Object.values(voteCounts));
     const winners = Object.keys(voteCounts).filter(vote => voteCounts[vote] === maxCount);
 
-    // Tek bir kazanan varsa, onu metin olarak döndür
-    // '0.5' sonucunu '½' olarak geri göstermeyi unutma
     if (winners.length === 1) {
         const winnerVote = winners[0];
         return { text: winnerVote === '0.5' ? '½' : winnerVote };
     }
 
-    // Eşitlik durumunda ortalamayı hesapla
     const sum = humanNumericVotes.reduce((a, b) => a + b, 0);
     const average = sum / humanNumericVotes.length;
     const roundedAverage = Math.round(average * 10) / 10;
-    
-    // Ortalamayı gösterirken de '0.5' yerine '½' kullanabiliriz (isteğe bağlı)
     const averageText = roundedAverage === 0.5 ? '½' : roundedAverage.toString();
 
     return {
@@ -102,6 +97,8 @@ function Room({ user: currentUser }) {
   const [isKickModalOpen, setIsKickModalOpen] = useState(false);
   const [userToKick, setUserToKick] = useState(null);
   const [activeParticipants, setActiveParticipants] = useState(new Set());
+  const [votingStartTime, setVotingStartTime] = useState(null);
+  const [timer, setTimer] = useState('00:00');
 
   const fetchTasks = useCallback(async () => {
     const token = sessionStorage.getItem('token');
@@ -157,6 +154,7 @@ function Room({ user: currentUser }) {
         stateSub = client.subscribe(`/topic/room/${roomId}/state`, (message) => {
             const roomState = JSON.parse(message.body);
             setRoomOwnerEmail(roomState.ownerEmail);
+            setVotingStartTime(roomState.votingStartTime);
             setParticipants(roomState.participants || {});
             setActiveTask(roomState.activeTask || { title: 'Henüz bir görev belirlenmedi.', description: '', cardSet: '' });
             setVotes(roomState.votes || {});
@@ -182,16 +180,49 @@ function Room({ user: currentUser }) {
       if (client) client.deactivate();
     };
   }, [user, roomId, fetchTasks]); 
+    useEffect(() => {
+    // Eğer oylama başlamadıysa veya oylar zaten gösterildiyse, sayacı çalıştırma.
+    if (!votingStartTime || revealVotes) {
+      setTimer('00:00');
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - votingStartTime) / 1000); // Saniye cinsinden geçen süre
+
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+
+      // Zamanı "00:00" formatında göster
+      const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      setTimer(formattedTime);
+    }, 1000); // Her saniye güncelle
+
+    // Bileşen güncellendiğinde veya kaldırıldığında interval'ı temizle
+    return () => clearInterval(intervalId);
+  }, [votingStartTime, revealVotes]);
 
   const isModerator = user?.email === roomOwnerEmail;
   const allVotesIn = activeParticipants.size > 0 && activeParticipants.size === Object.keys(votes).length;
 
   const handleVote = (voteValue) => {
-    if (stompClient && user?.name) {
-      setHasVoted(true);
-      stompClient.publish({ destination: `/app/room/${roomId}/vote`, body: JSON.stringify({ sender: user.name, content: voteValue, type: 'VOTE' }) });
+    if (stompClient && user?.name && votingStartTime) {
+        const voteTime = Date.now();
+        const durationMs = voteTime - votingStartTime; // Süreyi hesapla
+
+        setHasVoted(true);
+        stompClient.publish({ 
+            destination: `/app/room/${roomId}/vote`, 
+            body: JSON.stringify({ 
+                sender: user.name, 
+                content: voteValue, 
+                durationMs: durationMs, // Süreyi mesaja ekle
+                type: 'VOTE' 
+            }) 
+        });
     }
-  };
+};
 
   const openKickConfirmModal = (usernameToKick) => {
     if (!isModerator) return;
@@ -305,13 +336,30 @@ function Room({ user: currentUser }) {
         <span className="participant-name">{name}</span>
       </div>
       <div className="participant-vote-status">
-        {votes[name] && !revealVotes && <span className="vote-check">✓</span>}
-        {votes[name] && revealVotes && <span className="vote-value">{votes[name]}</span>}
-      </div>
+  {/* votes[name] artık bir obje: { voteValue, durationMs } */}
+  {votes[name] && !revealVotes && (
+    <span className="vote-check">
+      ✓ 
+      {/* Süre varsa saniye cinsinden göster */}
+      {votes[name].durationMs && (
+        <span className="vote-duration">
+          ({Math.round(votes[name].durationMs / 1000)}s)
+        </span>
+      )}
+    </span>
+  )}
+  {votes[name] && revealVotes && <span className="vote-value">{votes[name].voteValue}</span>}
+</div>
     </li>
   ))}
 </ul>
           </div>
+          {activeTask && activeTask.id && votingStartTime && !revealVotes && (
+            <div className="voting-timer-container">
+              <span>Geçen Süre:</span>
+              <div className="timer-display">{timer}</div>
+            </div>
+          )}
          {/* Tüm moderatör butonları için bir sarmalayıcı */}
 <div className="moderator-controls">
   
@@ -347,6 +395,7 @@ function Room({ user: currentUser }) {
         </div>
         <div className="main-panel">
           <TaskDisplay task={activeTask} />
+                    {/* Sayaç, sadece bir oylama aktifken ve oylar henüz gösterilmemişken görünür */}
           
           {showTaskForm && isModerator ? (
               <TaskForm roomId={roomId} onTaskCreated={handleTaskCreated} />
@@ -363,15 +412,15 @@ function Room({ user: currentUser }) {
   />
 )}
                       
-                      {Object.entries(votes).map(([name, vote]) => (
-                        <RevealedCard
-                          key={name}
-                          name={name}
-                          vote={vote}
-                          avatarId={participants[name]?.avatarId}
-                          isAI={name === AI_PARTICIPANT_NAME}
-                        />
-                      ))}
+                      {Object.entries(votes).map(([name, voteData]) => (
+  <RevealedCard
+    key={name}
+    name={name}
+    vote={voteData.voteValue} // Sadece 'voteValue' değerini gönder
+    avatarId={participants[name]?.avatarId}
+    isAI={name === AI_PARTICIPANT_NAME}
+  />
+))}
                     </div>
                     {aiReasoning && (
                       <div className="ai-reasoning-box">

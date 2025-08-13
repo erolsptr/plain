@@ -4,7 +4,7 @@ import './ProfilePage.css';
 
 const AVATAR_IDS = [
   'cat', 'chicken', 'dog', 'duck', 'gorilla', 'hippopotamus',
-  'panda', 'rabbit', 'shark', 'bot', 'default-avatar'
+  'panda', 'rabbit', 'shark','beaver','hen','lion','snake', 'default-avatar'
 ];
 
 function ProfilePage({ user, onUserUpdate, onLogout }) {

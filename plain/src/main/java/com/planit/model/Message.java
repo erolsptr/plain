@@ -1,11 +1,14 @@
 package com.planit.model;
+import lombok.Data;
 
+@Data
 public class Message {
     private String sender;
     private String content;
     private String description;
     private MessageType type;
     private String cardSet; 
+    private Long durationMs;
 
     public enum MessageType {
         JOIN,

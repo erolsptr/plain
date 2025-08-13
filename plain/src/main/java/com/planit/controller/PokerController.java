@@ -130,7 +130,6 @@ public class PokerController {
         return ResponseEntity.ok(pendingTasks);
     }
 
-    // --- WebSocket Mesaj Eşlemeleri ---
     @MessageMapping("/room/{roomId}/register")
     public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor, Principal principal) {
         String userEmail = principal.getName();
@@ -159,7 +158,7 @@ public class PokerController {
     public void vote(@DestinationVariable String roomId, @Payload Message voteMessage) {
         String username = voteMessage.getSender();
         String voteValue = voteMessage.getContent();
-        roomService.recordVote(roomId, username, voteValue);
+        roomService.recordVote(roomId, username, voteValue, voteMessage.getDurationMs());
         publishFullRoomState(roomId);
     }
 
@@ -214,6 +213,8 @@ public class PokerController {
         currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
         currentRoomState.setAreVotesRevealed(false);
         currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
+        
+        currentRoomState.setVotingStartTime(roomService.getVotingStartTime(roomId));
         
         messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
     }

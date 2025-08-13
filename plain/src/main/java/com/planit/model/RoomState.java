@@ -9,10 +9,10 @@ public class RoomState {
 
     private String ownerEmail;
     private Map<String, Map<String, String>> participants;    private Task activeTask;
-    private Map<String, String> votes;
+    private Map<String, VoteData> votes;
     private boolean areVotesRevealed;
     private String aiReasoning;
-    
-    // YENİ ALAN: Aktif (çevrimiçi) olan katılımcıların isimlerini tutar
     private Set<String> activeParticipants; 
+    private Long votingStartTime; 
+
 }
