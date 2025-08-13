@@ -121,3 +121,69 @@
   background-color: var(--primary-color-hover);
   border-color: var(--primary-color-hover);
 }
+/* Navbar.css dosyasının en sonuna ekle */
+
+/* AÇIK TEMA DÜZELTMESİ: Navbar'daki butonların metin rengini zorla */
+body.light-theme .navbar-button {
+    color: var(--text-color-dark) !important; /* Beyaz metin */
+    background-color: var(--primary-color);
+}
+
+body.light-theme .navbar-button:hover {
+    background-color: var(--primary-color-hover);
+}
+
+body.light-theme .btn-register {
+     color: var(--text-color) !important; /* Koyu metin */
+     background-color: transparent;
+     border: 1px solid var(--text-color);
+}
+
+body.light-theme .btn-register:hover {
+    background-color: var(--text-color);
+    color: var(--bg-color) !important;
+}
+/* Navbar.css dosyasının en sonuna eklenecek */
+
+/* ======================================================= */
+/* === "ÇIKIŞ YAP" BUTONU İÇİN ÖZEL KIRMIZI STİL === */
+/* ======================================================= */
+
+/* Önce butonun temel stilini genel kurallardan sıfırlayalım */
+.navbar-button {
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    padding: 8px 16px; /* Buton boyutunu ayarla */
+    border-radius: var(--border-radius-md, 8px);
+    font-weight: 600;
+}
+
+/* Koyu Tema Stilleri (Varsayılan) */
+.navbar-button {
+    border-color: var(--error-color, #F56565);
+    color: var(--error-color, #F56565);
+}
+
+.navbar-button:hover {
+    background-color: var(--error-color, #F56565);
+    color: var(--text-color-dark, #1A202C); /* Koyu temada metin rengi */
+}
+
+
+/* Sadece AÇIK TEMA'da geçerli olacak stiller */
+body.light-theme .navbar-button {
+    /* Hafif şeffaf kırmızı arka plan */
+    background-color: rgba(229, 62, 62, 0.1); /* --error-color'ın RGB halinin %10 şeffafı */
+    
+    /* Belirgin kırmızı metin ve çerçeve */
+    border-color: rgba(229, 62, 62, 0.4);
+    color: #c53030; /* --error-color'ın biraz daha koyu hali */
+}
+
+body.light-theme .navbar-button:hover {
+    background-color: var(--error-color, #E53E3E);
+    border-color: var(--error-color, #E53E3E);
+    color: #FFFFFF; /* Açık temada hover metin rengi her zaman beyaz */
+}

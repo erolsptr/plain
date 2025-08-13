@@ -899,3 +899,22 @@
   font-weight: 700;
   color: var(--primary-color-hover);
 }
+/* Room.css dosyasının en sonuna ekle */
+
+/* 1. AÇIK TEMA: Aktif olmayan sekmenin metin rengini ayarla */
+body.light-theme .task-list-tabs button {
+    color: var(--text-color-muted);
+}
+body.light-theme .task-list-tabs button.active {
+    color: var(--primary-color);
+}
+
+/* 2. AÇIK TEMA: "Oylamayı Başlat" butonunun metin rengini ayarla */
+/* Bu butonun arkaplanı şeffaf olduğu için metni ana vurgu rengi yapmalıyız */
+body.light-theme .start-voting-btn {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+body.light-theme .start-voting-btn:hover {
+    color: var(--text-color-dark); /* Üzerine gelince metin beyaz olacak */
+}

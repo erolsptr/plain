@@ -242,3 +242,42 @@
   width: 100%;
   padding: 12px;
 }
+/* DashboardPage.css dosyasının en sonuna eklenecek */
+
+/* =================================================================== */
+/* === AÇIK TEMA "KATIL" BUTONU DÜZELTMESİ (RENK GÜNCELLENDİ) === */
+/* =================================================================== */
+
+/* Sadece AÇIK TEMA'da, Odaya Katıl formunun içindeki butonu hedefle */
+body.light-theme .join-room-form button {
+    /* DEĞİŞİKLİK: Arka plan rengini ana rengimizin %15 şeffaf hali yaptık */
+    background-color: rgba(56, 178, 172, 0.15); /* Turkuazın çok soluk tonu */
+    
+    color: var(--primary-color-hover); /* Metin rengini ana rengin biraz koyusu yaptık */
+    border: 1px solid rgba(56, 178, 172, 0.3); /* Çerçeveyi de ana rengin soluk bir tonu yaptık */
+}
+
+/* Üzerine gelindiğinde dolgulu hale gelmesi doğru, o stile dokunmuyoruz */
+body.light-theme .join-room-form button:hover {
+    background-color: var(--primary-color-hover);
+    color: var(--text-color-dark);
+    border-color: var(--primary-color-hover);
+}
+/* DashboardPage.css dosyasının en sonuna eklenecek */
+
+/* ======================================================= */
+/* === AÇIK TEMA "ODA OLUŞTUR" BUTONU STİL GÜNCELLEMESİ === */
+/* ======================================================= */
+
+/* Sadece AÇIK TEMA'da, .action-card içindeki butonu hedefle */
+body.light-theme .action-card button {
+    background-color: rgba(56, 178, 172, 0.15); /* Turkuazın çok soluk tonu */
+    color: var(--primary-color-hover); /* Metin rengi */
+    border: 1px solid rgba(56, 178, 172, 0.3); /* Çerçeve */
+}
+
+body.light-theme .action-card button:hover {
+    background-color: var(--primary-color-hover);
+    color: var(--text-color-dark);
+    border-color: var(--primary-color-hover);
+}

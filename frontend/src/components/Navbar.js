@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
 
 import logo from '../assets/logo.png'; 
+// --- 1. YENİ BİLEŞENİ İMPORT ET ---
+import ThemeToggle from './ThemeToggle';
 
 function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
@@ -21,13 +23,11 @@ function Navbar({ user, onLogout }) {
         <ul className="navbar-menu">
           {user ? (
             <>
-              {/* DEĞİŞİKLİK: "Kontrol Paneli" linki öne alındı */}
               <li className="navbar-item">
                 <Link to="/dashboard" className="navbar-links">
                   Kontrol Paneli
                 </Link>
               </li>
-              {/* DEĞİŞİKLİK: Profil linki, diğer linklerden sonra geliyor */}
               <li className="navbar-item">
                 <Link to="/profile" className="navbar-profile-link">
                   <img 
@@ -44,6 +44,10 @@ function Navbar({ user, onLogout }) {
                   Çıkış Yap
                 </button>
               </li>
+              {/* --- 2. TEMA DEĞİŞTİRİCİYİ BURAYA EKLE --- */}
+              <li className="navbar-item">
+                <ThemeToggle />
+              </li>
             </>
           ) : (
             <>
@@ -56,6 +60,10 @@ function Navbar({ user, onLogout }) {
                 <Link to="/register" className="navbar-links btn-register">
                   Kayıt Ol
                 </Link>
+              </li>
+              {/* --- 3. TEMA DEĞİŞTİRİCİYİ BURAYA DA EKLE (Kullanıcı giriş yapmamışken) --- */}
+              <li className="navbar-item">
+                <ThemeToggle />
               </li>
             </>
           )}

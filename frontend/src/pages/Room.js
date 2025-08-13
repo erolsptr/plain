@@ -14,6 +14,22 @@ import '../Room.css';
 
 const SOCKET_URL = 'http://localhost:8080/ws-poker';
 const AI_PARTICIPANT_NAME = 'plAIn Asistanı';
+// --- BU FONKSİYONU EKLE ---
+
+// Milisaniyeyi "dk:sn" formatına çeviren yardımcı fonksiyon
+const formatDuration = (ms) => {
+  if (ms === null || typeof ms === 'undefined') {
+    return ''; // Süre yoksa boş string döndür
+  }
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  // Sayıların başına '0' ekleyerek "02:05" gibi bir format sağlar
+  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  
+  return formattedTime;
+};
 
 // Room.js dosyasının en üstündeki fonksiyonu bununla değiştir
 
@@ -343,8 +359,8 @@ function Room({ user: currentUser }) {
       {/* Süre varsa saniye cinsinden göster */}
       {votes[name].durationMs && (
         <span className="vote-duration">
-          ({Math.round(votes[name].durationMs / 1000)}s)
-        </span>
+  ({formatDuration(votes[name].durationMs)})
+</span>
       )}
     </span>
   )}

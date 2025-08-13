@@ -22,6 +22,34 @@
   --success-color: #48BB78; /* Başarı: Yeşil */
   --error-color: #F56565;  /* Hata: Kırmızı */
 }
+/* index.css dosyasındaki :root bloğunun altına bunu ekle */
+
+/* 2a. Açık Tema Değişkenleri */
+body.light-theme {
+  --bg-color: #F4F7F9;
+  --bg-color-light: #E9EEF2;
+  --panel-color: #FFFFFF;
+  --panel-hover-color: #F9FAFB;
+  --border-color: #DDE2E7;
+  --text-color: #2c3e50;
+  --text-color-muted: #7f8c8d;
+  --text-color-dark: #FFFFFF;
+  --primary-color: #38B2AC;
+  --primary-color-hover: #2d9a95;
+  --secondary-color: #805AD5;
+  --success-color: #38A169;
+  --error-color: #E53E3E;
+}
+
+/* YENİ EKLENEN KURAL: Açık temadaki butonların metin rengini koyu yap */
+body.light-theme button {
+    color: var(--text-color-dark); /* Bu beyazdı, şimdi koyu olacak */
+}
+
+/* Metin rengi koyu olan açık arka planlı butonlar için özel bir durum */
+body.light-theme button.btn-light-bg {
+    color: var(--text-color); /* Koyu metin */
+}
 
 /* 3. Genel sayfa stillerini bu değişkenlerle güncelliyoruz */
 body {
@@ -69,4 +97,22 @@ code {
   background-color: var(--bg-color-light);
   padding: 0.2em 0.4em;
   border-radius: 3px;
+}
+/* index.css dosyasının en sonuna eklenecek */
+.theme-toggle-button {
+    background-color: var(--panel-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.theme-toggle-button:hover {
+    background-color: var(--panel-hover-color);
+    transform: scale(1.1);
 }

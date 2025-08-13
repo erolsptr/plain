@@ -175,3 +175,126 @@
   color: var(--danger-color);
   border: 1px solid var(--danger-color);
 }
+/* ProfilePage.css dosyasının en sonuna ekle */
+
+/* Açık temada, aktif olmayan menü linkinin rengini ayarla */
+body.light-theme .profile-menu a {
+    color: var(--text-color-muted); /* Soluk metin rengi */
+}
+
+/* Açık temada, aktif olan linkin rengi zaten doğru olmalı, ama garantileyelim */
+body.light-theme .profile-menu a.active {
+    color: var(--primary-color);
+}
+/* ProfilePage.css dosyasının en sonuna ekle */
+
+/* AÇIK TEMA DÜZELTMESİ (FARKLI YAKLAŞIM): */
+/* Linkin rengini doğrudan değiştirmek yerine, varsayılan rengini ayarlıyoruz. */
+
+/* Önce tüm linklerin rengini varsayılan olarak soluk yapalım */
+body.light-theme .profile-menu a {
+    color: var(--text-color-muted);
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Sonra aktif olanı veya üzerine gelineni renklendirelim */
+body.light-theme .profile-menu a.active,
+body.light-theme .profile-menu a:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-color-light);
+}
+/* ProfilePage.css dosyasının en sonuna eklenecek */
+
+/* =================================================================== */
+/* === PROFİL MENÜSÜ AÇIK TEMA RENK DÜZELTMESİ (NİHAİ ÇÖZÜM) === */
+/* =================================================================== */
+
+/* 1. ADIM: Her iki temada da, menüdeki linklerin varsayılan rengini
+   ana metin rengiyle aynı yapalım. Bu, 'beyaz üstüne beyaz' sorununu
+   her koşulda engeller. */
+.profile-menu a {
+    color: var(--text-color); /* Varsayılan renk: Koyu temada açık, açık temada koyu */
+    background-color: transparent; /* Arka planı sıfırla */
+    transition: all 0.2s ease;
+}
+
+/* 2. ADIM: Linkin üzerine gelindiğinde veya AKTİF olduğunda
+   arka planını renklendirip, metni daha da belirgin hale getirelim. */
+.profile-menu a:hover,
+.profile-menu a.active {
+    color: var(--primary-color); /* Metni vurgu rengi yap */
+    background-color: var(--bg-color-light); /* Arka planı hafifçe renklendir */
+}
+
+/* 3. ADIM (Güvenlik Önlemi): Açık temada istenmeyen bir durum olursa diye
+   renkleri bir kez daha, daha spesifik olarak tanımlayalım. Bu,
+   diğer tüm kuralları ezmesini garantiler. */
+body.light-theme .profile-menu a {
+    color: var(--text-color); /* Açık temada bu koyu bir renktir */
+}
+
+body.light-theme .profile-menu a:hover,
+body.light-theme .profile-menu a.active {
+    color: var(--primary-color);
+    background-color: var(--bg-color-light);
+}
+/* ProfilePage.css dosyasının en sonuna eklenecek */
+
+/* =================================================================== */
+/* === PROFİL SEKMELERİ İÇİN AÇIK TEMA RENK DÜZELTMESİ (NİHAİ) === */
+/* =================================================================== */
+
+/* 1. Varsayılan (aktif olmayan) sekme butonu için stiller */
+.profile-tabs button {
+    background: transparent;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+/* 2. Aktif olan sekme butonu için stil */
+.profile-tabs button.active {
+    font-weight: 700;
+    border-bottom-color: var(--primary-color);
+}
+
+/* 3. SADECE AÇIK TEMA İÇİN RENK AYARI */
+/* Aktif olmayan butonun metin rengini ayarla */
+body.light-theme .profile-tabs button {
+    color: var(--text-color-muted);
+}
+
+/* Aktif olan butonun metin rengini ayarla */
+body.light-theme .profile-tabs button.active {
+    color: var(--primary-color);
+}
+.save-changes-btn {
+    background-color: var(--primary-color);
+    color: var(--text-color-dark); /* Metin rengi her zaman açık/beyaz */
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--border-radius-md, 8px);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* 2. Sadece AÇIK TEMA'da, bu butonların ÜZERİNE GELİNCE
+      davranışlarını değiştirelim. */
+body.light-theme .save-changes-btn:hover:not(:disabled) {
+    background-color: var(--primary-color-hover); /* Arka planı koyulaştır */
+    transform: translateY(-2px); /* Hafif yukarı kalkma efekti */
+}
+
+/* 3. KOYU TEMA'da ise eski, beğendiğin şeffaflaşma efektini
+      korumak için bir kural yazalım. */
+/* :not(.light-theme) seçicisi, light-theme sınıfı YOKKEN anlamına gelir */
+body:not(.light-theme) .save-changes-btn:hover:not(:disabled) {
+    opacity: 0.8; /* Koyu temadaki şeffaflık efekti */
+    transform: translateY(-2px);
+}
