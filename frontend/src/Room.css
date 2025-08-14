@@ -296,13 +296,10 @@
   text-align: center;
 }
 
-/* === GÖREV LİSTESİ VE SEKMELER (YENİ) === */
 .task-list-section {
   margin-top: 40px;
-  /* Arka planı, ana panelin arka planıyla aynı yapalım */
 }
 
-/* Sekme Butonları */
 .task-list-tabs {
   display: flex;
   border-bottom: 2px solid var(--border-color);
@@ -330,11 +327,10 @@
   font-weight: bold;
 }
 
-/* Aktif sekmenin altındaki o şık çizgi */
 .task-list-tabs button.active::after {
   content: '';
   position: absolute;
-  bottom: -2px; /* Ana border'ın üzerine gelsin */
+  bottom: -2px; 
   left: 0;
   width: 100%;
   height: 2px;
@@ -342,7 +338,7 @@
 }
 
 .task-list-content {
-  /* İçerik buraya gelecek */
+  
 }
 
 /* "Hazır Olanlar" Kartları */
@@ -383,7 +379,7 @@
   background-color: var(--success-color);
   color: white;
 }
-/* === ODA BAŞLIĞI VE LİNK KOPYALAMA (YENİ) === */
+
 .room-header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 15px;
@@ -415,7 +411,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  position: relative; /* Bildirim için gerekli */
+  position: relative; 
 }
 
 .copy-link-btn:hover {
@@ -423,10 +419,9 @@
   color: var(--primary-color);
 }
 
-/* "Kopyalandı!" bildirimi için stil */
 .copy-tooltip {
   position: absolute;
-  bottom: 120%; /* Butonun üstünde görünmesini sağlar */
+  bottom: 120%; 
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--success-color);
@@ -444,8 +439,8 @@
 
 .ai-reasoning-box {
   width: 100%;
-  max-width: 600px; /* Çok fazla genişlemesini önle */
-  margin-top: 30px; /* Üstündeki ızgaradan boşluk bırak */
+  max-width: 600px; 
+  margin-top: 30px; 
   padding: 20px;
   background-color: var(--panel-color);
   border-left: 4px solid var(--primary-color);
@@ -512,7 +507,7 @@
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.2s ease, visibility 0.2s ease;
-  z-index: 1000; /* Modal'ın üzerinde görünmesi için z-index'i yüksek tutalım */
+  z-index: 1000; 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -533,29 +528,26 @@
 .voter-info-container {
   display: flex;
   align-items: center;
-  gap: 8px; /* İsim ile ikon arasındaki boşluk */
+  gap: 8px; 
 }
 /* ======================================================= */
 /* KATILIMCI LİSTESİ VE AVATAR STİLLERİ (NİHAİ VERSİYON)    */
 /* ======================================================= */
 
-/* 'li' elementini flex container yapalım ki içerikler düzgün hizalansın */
 .side-panel li {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  /* padding-left'i sıfırlıyoruz çünkü avatar container'ı kullanacağız */
   padding-left: 15px; 
 }
 
-/* Avatar ve ismi sola, oy durumunu sağa yaslamak için */
 .participant-details {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-grow: 1; /* Bu sol tarafın genişlemesini sağlar */
-  overflow: hidden; /* İsim taşarsa gizle */
+  flex-grow: 1; 
+  overflow: hidden; 
 }
 
 .participant-name {
@@ -566,8 +558,8 @@
 
 /* Avatar ve üzerindeki atma butonunu saran container */
 .participant-avatar-container {
-  position: relative; /* Butonun konumlandırılması için */
-  flex-shrink: 0; /* Avatarın bozulmasını/küçülmesini engelle */
+  position: relative; 
+  flex-shrink: 0; 
 }
 
 .participant-avatar {
@@ -576,7 +568,7 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--border-color);
-  display: block; /* Altındaki gereksiz boşluğu kaldırır */
+  display: block; 
 }
 
 /* Oy durumu (tik veya puan) için sağ taraf */
@@ -593,7 +585,7 @@
   height: 20px;
   background-color: var(--danger-color, #e74c3c);
   color: white;
-  border: 2px solid var(--bg-color-light); /* Arka plan rengiyle uyumlu çerçeve */
+  border: 2px solid var(--bg-color-light); 
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -608,7 +600,6 @@
   z-index: 10;
 }
 
-/* Sadece moderatör, 'li' elemanının (tüm satırın) üzerine geldiğinde butonu göster */
 .side-panel li:hover .kick-user-btn {
   opacity: 1;
   visibility: visible;
@@ -679,14 +670,34 @@
   opacity: 0.85;
 }
 /* ============================================= */
-/* MODERATÖR AVATAR ÇERÇEVESİ (YENİ)            */
+/* MODERATÖR AVATAR ÇERÇEVESİ          */
 /* ============================================= */
 
 .participant-avatar.moderator {
-  /* Çerçevenin rengini belirliyoruz */
   border-color: #FFD700; 
   
-  /* YENİ: Gölgeyi, resmin yuvarlak şeklini takip edecek şekilde uyguluyoruz */
+}
+/* ======================================================= */
+/* AKTİF DURUM GÖSTERGESİ                            */
+/* ======================================================= */
+
+.status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-color-light); 
+  z-index: 15; 
+}
+
+.status-indicator.active {
+  background-color: var(--success-color, #2ecc71); 
+}
+
+.status-indicator.inactive {
+  background-color: #7f8c8d; 
 }
 /* ======================================================= */
 /* AKTİF DURUM GÖSTERGESİ (YENİ)                            */
@@ -699,40 +710,18 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid var(--bg-color-light); /* Arka planla uyumlu çerçeve */
-  z-index: 15; /* Atma butonunun bile üzerinde olsun */
+  border: 2px solid var(--bg-color-light); 
+  z-index: 15; 
 }
 
 .status-indicator.active {
-  background-color: var(--success-color, #2ecc71); /* Yeşil */
+  background-color: var(--success-color, #2ecc71); 
 }
 
 .status-indicator.inactive {
-  background-color: #7f8c8d; /* Gri */
-}
-/* ======================================================= */
-/* AKTİF DURUM GÖSTERGESİ (YENİ)                            */
-/* ======================================================= */
-
-.status-indicator {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid var(--bg-color-light); /* Arka planla uyumlu çerçeve */
-  z-index: 15; /* Atma butonunun bile üzerinde olsun */
+  background-color: #7f8c8d; 
 }
 
-.status-indicator.active {
-  background-color: var(--success-color, #2ecc71); /* Yeşil */
-}
-
-.status-indicator.inactive {
-  background-color: #7f8c8d; /* Gri */
-}
-/* Room.css içine eklenecek veya güncellenecek */
 
 .results-container {
   width: 100%;
@@ -751,7 +740,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: flex-end; /* Kartları alt çizgide hizala */
+  align-items: flex-end; 
   gap: 20px;
 }
 .ai-reasoning-box {
@@ -772,40 +761,34 @@
   font-style: italic;
   line-height: 1.5;
 }
-/* Room.css - GENEL YAPI VE TAŞMA SORUNU İÇİN NİHAİ ÇÖZÜM */
 
-/* 1. Ana panelin genişliğini kontrol altına alalım */
 .main-panel {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  /* BU ÇOK ÖNEMLİ: Panelin, kendi genişliğinin dışına taşmasını engeller. */
   overflow: hidden; 
 }
 
-/* 2. Görev listesi bölümünün de taşmasını engelleyelim */
 .task-list-section {
   display: flex;
   flex-direction: column;
   background-color: var(--panel-color);
   border-radius: var(--border-radius-md);
   padding: 20px;
-  /* Konteynerin esnemesine ama taşmamasına izin ver */
   min-height: 200px;
 }
 
 .task-list-content {
   margin-top: 20px;
-  overflow-y: auto; /* İçerik sığmazsa, sadece bu alanda bir kaydırma çubuğu çıksın */
+  overflow-y: auto; 
 }
 
 
-/* 3. Sorunlu olan .task-history-card'ı yeniden tanımlayalım */
 .task-history-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px; /* Elemanlar arası boşluk */
+  gap: 15px;
   padding: 15px;
   background-color: var(--bg-color-light);
   border: 1px solid var(--border-color);
@@ -819,20 +802,17 @@
   background-color: var(--panel-hover-color);
 }
 
-/* 4. Kartın içindeki başlık ve alt bilgi için bir sarmalayıcı (Bu JS'de yoksa bile CSS'te sorun yaratmaz) */
-/* Eğer JS'de header/footer divleri varsa bu çalışır, yoksa da zarar vermez. */
 .task-history-card-header, .task-history-card-details {
-  flex-grow: 1; /* Mevcut alanı doldur */
-  min-width: 0;  /* Esnek elemanın küçülebilmesini sağlar - EN KRİTİK KURAL */
+  flex-grow: 1; 
+  min-width: 0;  
 }
 
-/* 5. Uzun başlıkların taşmasını engelleyen sihirli kurallar */
 .task-history-card-title {
   font-weight: 600;
-  white-space: nowrap;      /* Metni tek satırda kalmaya zorla */
-  overflow: hidden;         /* Taşan kısmı gizle */
-  text-overflow: ellipsis;  /* Sonuna "..." ekle */
-  display: block;           /* Bu kuralların çalışması için block seviyesinde olmalı */
+  white-space: nowrap;      
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  display: block;           
 }
 
 .task-history-card-footer {
@@ -840,9 +820,8 @@
   color: var(--text-color-muted);
 }
 
-/* 6. Puan göstergesinin sabit kalmasını ve içeriği ezmemesini sağlayalım */
 .task-history-card-score {
-  flex-shrink: 0; /* Bu elemanın küçülmesini engelle */
+  flex-shrink: 0; 
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--primary-color);
@@ -850,19 +829,16 @@
   padding: 5px 10px;
   border-radius: 5px;
 }
-/* Room.css'in en sonuna eklenecek */
 
-/* Moderatör butonlarını saran ana konteyner */
 .moderator-controls {
   display: flex;
-  flex-direction: column; /* Butonları dikey olarak hizala */
-  gap: 10px; /* Butonlar arasına 10px boşluk koy */
-  margin-top: 20px; /* Üstündeki katılımcı listesinden ayırmak için */
-  padding-top: 20px; /* Üstüne bir de çizgi çekelim */
+  flex-direction: column; 
+  gap: 10px; 
+  margin-top: 20px; 
+  padding-top: 20px; 
   border-top: 1px solid var(--border-color);
 }
 
-/* Oylar gösterildikten sonraki "Yeni Tur" ve "Kaydet" butonlarını yan yana getirir */
 .moderator-actions {
   display: flex;
   gap: 10px;
@@ -870,9 +846,8 @@
 }
 
 .moderator-actions button {
-  flex-grow: 1; /* Butonların mevcut alanı eşit paylaşmasını sağlar */
+  flex-grow: 1; 
 }
-/* Room.css dosyasının en sonuna eklenecek */
 
 .voting-timer-container {
   display: flex;
@@ -899,9 +874,7 @@
   font-weight: 700;
   color: var(--primary-color-hover);
 }
-/* Room.css dosyasının en sonuna ekle */
 
-/* 1. AÇIK TEMA: Aktif olmayan sekmenin metin rengini ayarla */
 body.light-theme .task-list-tabs button {
     color: var(--text-color-muted);
 }
@@ -909,12 +882,10 @@ body.light-theme .task-list-tabs button.active {
     color: var(--primary-color);
 }
 
-/* 2. AÇIK TEMA: "Oylamayı Başlat" butonunun metin rengini ayarla */
-/* Bu butonun arkaplanı şeffaf olduğu için metni ana vurgu rengi yapmalıyız */
 body.light-theme .start-voting-btn {
     color: var(--primary-color);
     border-color: var(--primary-color);
 }
 body.light-theme .start-voting-btn:hover {
-    color: var(--text-color-dark); /* Üzerine gelince metin beyaz olacak */
+    color: var(--text-color-dark); 
 }

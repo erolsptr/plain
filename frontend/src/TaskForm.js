@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
-// Yeni "Sık Kullanılanlar" destesi tanımlandı
 const FAVORITES_DECK = ['0', '½', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 
 const CARD_SETS = {
-  // Yeni deste en üste eklendi
   FAVORITES: FAVORITES_DECK,
   FIBONACCI: ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕'],
   MODIFIED_FIB: ['0', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '8', '13', '?', '☕'],
@@ -13,11 +11,9 @@ const CARD_SETS = {
   HOURS: ['1', '2', '4', '8', '16', '24', '32', '40'],
 };
 
-// 'MANUAL_CARDS' ile ilgili tüm mantık kaldırıldı.
 
 const getDefaultSelectedCards = (cardSetArray) => {
   const defaultSelection = new Set();
-  // '?' ve '☕' gibi özel kartları her zaman hariç tut
   const filteredCards = cardSetArray.filter(card => card !== '?' && card !== '☕');
   filteredCards.forEach(card => {
     defaultSelection.add(card);
@@ -29,14 +25,11 @@ const getDefaultSelectedCards = (cardSetArray) => {
 function TaskForm({ roomId, onTaskCreated }) { 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  // Varsayılan deste olarak 'FAVORITES' ayarlandı
   const [cardSet, setCardSet] = useState('FAVORITES');
   const [selectedCards, setSelectedCards] = useState(getDefaultSelectedCards(CARD_SETS.FAVORITES));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // 'MANUAL' kontrolü kaldırıldı, mantık basitleştirildi.
-    // Her deste değişiminde, o destenin tüm kartları varsayılan olarak seçilir.
     setSelectedCards(getDefaultSelectedCards(CARD_SETS[cardSet]));
   }, [cardSet]);
 
@@ -56,7 +49,6 @@ function TaskForm({ roomId, onTaskCreated }) {
     if (!title.trim() || isSubmitting) {
       return;
     }
-    // Seçili kart yoksa göndermeyi engelle
     if (selectedCards.size === 0) {
         alert("Lütfen en az bir kart seçin.");
         return;
@@ -94,7 +86,6 @@ function TaskForm({ roomId, onTaskCreated }) {
       onTaskCreated(createdTask);
       setTitle('');
       setDescription('');
-      // Form gönderildikten sonra varsayılan desteye geri dön
       setCardSet('FAVORITES'); 
 
     } catch (error) {
@@ -105,7 +96,6 @@ function TaskForm({ roomId, onTaskCreated }) {
     }
   };
 
-  // 'MANUAL' mantığı kaldırıldığı için bu satır basitleştirildi.
   const currentVisibleCards = CARD_SETS[cardSet];
 
   return (
@@ -130,14 +120,12 @@ function TaskForm({ roomId, onTaskCreated }) {
           value={cardSet} 
           onChange={(e) => setCardSet(e.target.value)}
         >
-          {/* Seçenekler CARD_SETS nesnesinden dinamik olarak oluşturuluyor */}
           <option value="FAVORITES">Sık Kullanılanlar</option>
           <option value="FIBONACCI">Fibonacci</option>
           <option value="MODIFIED_FIB">Değiştirilmiş Fibonacci</option>
           <option value="SCRUM">Scrum</option>
           <option value="SEQUENTIAL">Sıralı</option>
           <option value="HOURS">Saat</option>
-          {/* 'MANUAL' seçeneği kaldırıldı */}
         </select>
       </div>
 

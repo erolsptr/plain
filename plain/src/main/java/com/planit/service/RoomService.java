@@ -60,7 +60,6 @@ public class RoomService {
     private final Map<String, String> roomOwnerEmails = new ConcurrentHashMap<>();
     private final Map<String, String> aiReasonings = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> activeUsersByRoom = new ConcurrentHashMap<>();
-    // YENİ: Oylamanın başlangıç zamanını (timestamp) tutacak harita
     private final Map<String, Long> votingStartTimes = new ConcurrentHashMap<>();
 
     @Transactional
@@ -69,14 +68,12 @@ public class RoomService {
     if (!rooms.containsKey(roomId)) {
         logger.info("Oda hafızada bulunamadı (ID: {}), veritabanından yeniden canlandırılıyor...", roomId);
         pokerRoomRepository.findById(roomId).ifPresent(room -> {
-            // Oda katılımcılarının isimlerini hafızaya al
             Set<String> participants = room.getParticipants().stream()
                     .map(User::getName)
                     .collect(Collectors.toSet());
             participants.add(AI_PARTICIPANT_NAME);
             rooms.put(roomId, participants);
 
-            // EN ÖNEMLİ EKLEME: Odanın sahibinin e-postasını da hafızaya al!
             if (room.getOwner() != null) {
                 roomOwnerEmails.put(roomId, room.getOwner().getEmail());
                 logger.info("Oda sahibi ({}) {} ID'li oda için hafızaya alındı.", room.getOwner().getEmail(), roomId);
@@ -101,7 +98,6 @@ public class RoomService {
     
     @Transactional
 public void kickUserFromRoom(String roomId, String usernameToKick) {
-    // Hem genel hem de aktif listelerden sil
     Set<String> participantsInMemory = rooms.get(roomId);
     if (participantsInMemory != null) {
         participantsInMemory.remove(usernameToKick);
@@ -133,7 +129,6 @@ public void kickUserFromRoom(String roomId, String usernameToKick) {
         activeParticipants.remove(username);
     }
     
-    // DEĞİŞİKLİK: Burası da kickUserFromRoom ile aynı mantıkta çalışır.
     Map<String, VoteData> votesInMemory = roomVotes.get(roomId);
     if (votesInMemory != null) {
         votesInMemory.remove(username);
@@ -185,7 +180,6 @@ public void kickUserFromRoom(String roomId, String usernameToKick) {
         return activeTasks.get(roomId);
     }
 
-    // YENİ: Oylama başlangıç zamanını döndüren metot
     public Long getVotingStartTime(String roomId) {
         return votingStartTimes.get(roomId);
     }
@@ -215,15 +209,12 @@ public void kickUserFromRoom(String roomId, String usernameToKick) {
             roomVotes.get(roomId).clear();
         }
         aiReasonings.remove(roomId);
-        // DEĞİŞİKLİK: Oylar temizlendiğinde sayacı da sıfırla.
         votingStartTimes.remove(roomId);
     }
     
     private void clearHumanVotes(String roomId) {
-    // DEĞİŞİKLİK: Haritanın tipi VoteData olarak güncellendi.
     Map<String, VoteData> votes = roomVotes.get(roomId);
     if (votes != null) {
-        // Mantık aynı kalıyor: Anahtarı (kullanıcı adı) AI_PARTICIPANT_NAME olmayanları sil.
         votes.entrySet().removeIf(entry -> !entry.getKey().equals(AI_PARTICIPANT_NAME));
     }
 }
@@ -272,24 +263,18 @@ public void kickUserFromRoom(String roomId, String usernameToKick) {
         }).sorted(Comparator.comparing((Map<String, Object> m) -> (Long)m.get("completionOrder")).reversed()).collect(Collectors.toList());
     }
 
-    // --- BU METODU GÜNCELLE ---
-// --- BU METODU YENİSİYLE DEĞİŞTİR ---
 @Transactional
 public void saveCurrentVotingResult(String roomId, String requesterEmail) {
-    // Adım 1: İsteği yapan kullanıcıyı bul.
     User requester = userRepository.findByEmail(requesterEmail)
             .orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
 
-    // Adım 2: Odayı ve SAHİP BİLGİSİNİ doğrudan veritabanından çek.
     PokerRoom room = pokerRoomRepository.findById(roomId)
             .orElseThrow(() -> new RuntimeException("Sonuçların kaydedileceği oda bulunamadı: " + roomId));
 
-    // Adım 3: Yetki kontrolünü, hafızaya değil, DOĞRUDAN veritabanından gelen obje üzerinden yap.
     if (room.getOwner() == null || !room.getOwner().getEmail().equals(requesterEmail)) {
         throw new AccessDeniedException("Sadece oda sahibi sonuçları kaydedebilir.");
     }
     
-    // --- Metodun geri kalanında hiçbir değişiklik yok, aynı mantıkla çalışır ---
     Task currentTask = getActiveTask(roomId);
     Map<String, VoteData> currentVotes = getVotes(roomId);
     
@@ -405,7 +390,6 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         activeTasks.put(roomId, taskToActivate); 
         clearAllVotes(roomId);
         
-        // YENİ: Oylama başladığı anın zaman damgasını kaydet.
         votingStartTimes.put(roomId, System.currentTimeMillis());
         
         triggerAIEstimation(roomId, taskToActivate, requesterEmail);
@@ -426,7 +410,7 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
                 "consensusScore", (String) historyItem.get("consensusScore")
             ))
             .collect(Collectors.toList());
-        final int HISTORY_LIMIT = 10;
+        final int HISTORY_LIMIT = 15;
         if (simplifiedHistory.size() > HISTORY_LIMIT) {
             simplifiedHistory = simplifiedHistory.subList(0, HISTORY_LIMIT);
         }
@@ -471,7 +455,6 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
     public void startNewRound(String roomId) {
         clearHumanVotes(roomId);
         
-        // YENİ: Yeni tur başladığında sayacı da yeniden başlat.
         votingStartTimes.put(roomId, System.currentTimeMillis());
         
         Task currentTask = getActiveTask(roomId);

@@ -17,7 +17,6 @@ public class AIVote {
     @Column(nullable = false)
     private String voteValue;
 
-    // YENİ ALAN: AI'ın gerekçesini saklar
     @Column(columnDefinition = "TEXT", nullable = true)
     private String reasoning;
 

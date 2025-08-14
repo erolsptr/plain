@@ -109,8 +109,7 @@
   color: var(--secondary-color, #805AD5);
 }
 
-
-/* Karar Oyu Kartı (Kral/Kraliçe) */
+/* --- KONSENSÜS KARTI --- */
 
 .consensus-card {
   width: 150px;
@@ -121,22 +120,30 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Dikeyde içeriği dağıtarak daha dengeli bir görünüm sağlar */
+  justify-content: space-around; 
   gap: 5px;
   color: #78350f;
-  padding: 10px;
+  padding: 15px 10px; /* Dikey padding'i artırdık */
   box-sizing: border-box;
   text-align: center;
 }
 
-/* BÜYÜK SAYI STİLİ: Anlaşma olduğunda kullanılacak */
+/* YENİ: "Karar Oyu" başlığının stili */
+.consensus-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px; /* Harf aralarını biraz aç */
+}
+
+/* BÜYÜK SAYI STİLİ */
 .consensus-value-large {
   font-size: 4.5rem;
   font-weight: 800;
   line-height: 1;
 }
 
-/* KÜÇÜK YAZI STİLİ: "Anlaşma Yok" için kullanılacak */
+/* KÜÇÜK YAZI STİLİ ("Anlaşma Yok" için) */
 .consensus-value-small {
   font-size: 1.8rem;
   font-weight: 700;
@@ -151,5 +158,4 @@
 
 .consensus-icon {
   font-size: 1.5rem;
-  margin-top: 5px;
 }

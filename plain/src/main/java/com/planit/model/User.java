@@ -36,7 +36,6 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true) 
     private String name;
 
-    // YENİ ALAN: Kullanıcının avatar kimliğini tutar
     @Column(name = "avatar_id", nullable = true, length = 50, columnDefinition = "varchar(50) default 'default-avatar'")
     private String avatarId;
 

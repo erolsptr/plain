@@ -8,10 +8,8 @@ const getCardSuit = (value) => {
   if (value === '☕') return 'coffee';
   if (value === '½') return 'clubs'; // ½ her zaman Sinek (Siyah) olsun
 
-  // Değeri sayıya çevirmeyi dene
   const numericValue = parseFloat(String(value).replace(',', '.'));
 
-  // Eğer sayı değilse, sembol atama
   if (isNaN(numericValue)) {
     return '';
   }
@@ -19,7 +17,6 @@ const getCardSuit = (value) => {
   // Sayının tam kısmını al ve 4'e bölümünden kalana göre grup ata
   const suitIndex = Math.floor(numericValue) % 4;
   
-  // --- DEĞİŞTİRİLEN KISIM: Renklerin ardışık gelmesi için sıralama değiştirildi ---
   switch (suitIndex) {
     case 0: return 'spades';   // Siyah
     case 1: return 'hearts';   // Kırmızı
@@ -43,12 +40,12 @@ function VotingCards({ cards, onVote, hasVoted }) {
       <p>Lütfen görevin karmaşıklığını oylayın:</p>
       <div className="cards">
         {cards.map((value) => {
-          const suit = getCardSuit(value); // Her kart için sembol grubunu hesapla
+          const suit = getCardSuit(value); 
           return (
             <div
               key={value}
               className={`vote-card ${selectedVote === value ? 'selected' : ''}`}
-              data-suit={suit} // CSS'in kullanması için data attribute olarak ata
+              data-suit={suit} 
               onClick={() => handleVoteClick(value)}
               role="button"
               tabIndex={hasVoted ? -1 : 0}

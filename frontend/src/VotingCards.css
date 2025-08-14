@@ -32,7 +32,6 @@
   overflow: hidden;
 }
 
-/* --- DEĞİŞTİRİLEN KISIM BAŞLANGICI --- */
 .vote-card::after {
   content: '';
   position: absolute;
@@ -40,13 +39,12 @@
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: 'Times New Roman', serif;
-  font-size: 5.5rem; /* Sembol boyutu büyütüldü */
-  color: rgba(0, 0, 0, 0.12); /* Görünürlük artırıldı */
+  font-size: 5.5rem; 
+  color: rgba(0, 0, 0, 0.12); 
   z-index: 0;
   pointer-events: none;
 }
 
-/* Sembolleri data-suit'e göre atayan genel kurallar */
 .vote-card[data-suit="spades"]::after {
   content: '♠';
 }
@@ -68,7 +66,6 @@
 .vote-card[data-suit="coffee"]::after {
   content: ''; 
 }
-/* --- DEĞİŞTİRİLEN KISIM SONU --- */
 
 
 .vote-card:hover:not(.selected):not(:disabled) {
@@ -106,7 +103,6 @@
   z-index: 1;
 }
 
-/* Kırmızı kartların köşe yazı renklerini de kırmızı yapalım */
 .vote-card[data-suit="hearts"] .card-corner,
 .vote-card[data-suit="diamonds"] .card-corner {
   color: #D91E18;

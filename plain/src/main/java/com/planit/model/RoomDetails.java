@@ -24,14 +24,11 @@ public class RoomDetails {
     @Column(name = "room_name", nullable = false)
     private String roomName;
 
-    // --- YENİ EKLENEN, VİZYONUNU DESTEKLEYEN ALANLAR ---
 
     @Column(name = "creation_date", nullable = false, updatable = false)
     private LocalDateTime creationDate;
 
     @Column(name = "last_activity_date")
-    private LocalDateTime lastActivityDate; // O odadaki son aktivitenin (örn: oylama kaydı) tarihi
+    private LocalDateTime lastActivityDate; 
 
-    // Buraya ileride 'private String roomDescription;' gibi başka alanlar da eklenebilir.
-    // --- YENİ ALANLAR SONU ---
 }

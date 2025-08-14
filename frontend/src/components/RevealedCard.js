@@ -1,7 +1,6 @@
 import React from 'react';
-import './RevealedCard.css'; // Yeni CSS dosyamızı import ediyoruz
+import './RevealedCard.css'; 
 
-// Sembolleri ve renkleri atayan yardımcı fonksiyon
 const getCardSuit = (value) => {
   if (value === '?') return 'joker';
   if (value === '☕') return 'coffee';
@@ -20,22 +19,20 @@ const getCardSuit = (value) => {
   }
 };
 
-// Bu bileşen, gösterilen her bir sonuç kartını temsil edecek
 function RevealedCard({ name, vote, avatarId, isAI, isConsensus, consensusValue, consensusAverage }) {
   
   if (isConsensus) {
-    // consensusAverage prop'unun varlığı, bir anlaşmazlık olduğunu gösterir.
     const isTie = !!consensusAverage;
 
     return (
       <div className="revealed-card consensus-card">
         
-        {/* Koşullu olarak doğru CSS sınıfını ata */}
+        <div className="consensus-title">Karar Oyu</div>
+
         <div className={isTie ? "consensus-value-small" : "consensus-value-large"}>
           {consensusValue}
         </div>
         
-        {/* Sadece isTie true ise ortalamayı göster */}
         {isTie && (
           <div className="consensus-average">(Ortalama: {consensusAverage})</div>
         )}
@@ -43,9 +40,8 @@ function RevealedCard({ name, vote, avatarId, isAI, isConsensus, consensusValue,
         <div className="consensus-icon">👑</div>
       </div>
     );
-  }
+}
 
-  // Diğer tüm kartlar için (Kullanıcı ve AI)
   const suit = getCardSuit(vote);
   const cardClasses = `revealed-card ${isAI ? 'ai-card' : ''}`;
   const avatarSrc = `http://localhost:8080/avatars/${avatarId}.png`;

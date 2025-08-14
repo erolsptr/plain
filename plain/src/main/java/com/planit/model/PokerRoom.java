@@ -49,7 +49,6 @@ public class PokerRoom {
         this.participants.add(user);
     }
 
-    // YENİ METOD: Katılımcıyı odadan çıkarır
     public void removeParticipant(User user) {
         this.participants.remove(user);
     }

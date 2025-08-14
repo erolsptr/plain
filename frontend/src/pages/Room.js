@@ -14,27 +14,22 @@ import '../Room.css';
 
 const SOCKET_URL = 'http://localhost:8080/ws-poker';
 const AI_PARTICIPANT_NAME = 'plAIn Asistanı';
-// --- BU FONKSİYONU EKLE ---
 
-// Milisaniyeyi "dk:sn" formatına çeviren yardımcı fonksiyon
 const formatDuration = (ms) => {
   if (ms === null || typeof ms === 'undefined') {
-    return ''; // Süre yoksa boş string döndür
+    return ''; 
   }
   const totalSeconds = Math.round(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  // Sayıların başına '0' ekleyerek "02:05" gibi bir format sağlar
   const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   
   return formattedTime;
 };
 
-// Room.js dosyasının en üstündeki fonksiyonu bununla değiştir
 
 const getVoteResult = (votes) => {
-    // votes objesi artık { 'Erol': { voteValue: '5', durationMs: 123 }, ... } formatında
     const voteEntries = Object.entries(votes);
     if (!voteEntries.length) return null;
 
@@ -44,8 +39,6 @@ const getVoteResult = (votes) => {
         return isNaN(num) ? null : num;
     };
     
-    // YENİ MANTIK: Gelen 'votes' objesinin değerlerinden (yani {voteValue, durationMs} objelerinden) 
-    // voteValue'ları alarak yeni bir basit 'oy -> sayı' haritası oluştur.
     const simplifiedVotes = {};
     voteEntries.forEach(([voter, voteData]) => {
         simplifiedVotes[voter] = voteData.voteValue;
@@ -197,7 +190,6 @@ function Room({ user: currentUser }) {
     };
   }, [user, roomId, fetchTasks]); 
     useEffect(() => {
-    // Eğer oylama başlamadıysa veya oylar zaten gösterildiyse, sayacı çalıştırma.
     if (!votingStartTime || revealVotes) {
       setTimer('00:00');
       return;
@@ -205,17 +197,15 @@ function Room({ user: currentUser }) {
 
     const intervalId = setInterval(() => {
       const now = Date.now();
-      const elapsed = Math.floor((now - votingStartTime) / 1000); // Saniye cinsinden geçen süre
+      const elapsed = Math.floor((now - votingStartTime) / 1000); 
 
       const minutes = Math.floor(elapsed / 60);
       const seconds = elapsed % 60;
 
-      // Zamanı "00:00" formatında göster
       const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       setTimer(formattedTime);
-    }, 1000); // Her saniye güncelle
+    }, 1000); 
 
-    // Bileşen güncellendiğinde veya kaldırıldığında interval'ı temizle
     return () => clearInterval(intervalId);
   }, [votingStartTime, revealVotes]);
 
@@ -225,7 +215,7 @@ function Room({ user: currentUser }) {
   const handleVote = (voteValue) => {
     if (stompClient && user?.name && votingStartTime) {
         const voteTime = Date.now();
-        const durationMs = voteTime - votingStartTime; // Süreyi hesapla
+        const durationMs = voteTime - votingStartTime; 
 
         setHasVoted(true);
         stompClient.publish({ 
@@ -233,7 +223,7 @@ function Room({ user: currentUser }) {
             body: JSON.stringify({ 
                 sender: user.name, 
                 content: voteValue, 
-                durationMs: durationMs, // Süreyi mesaja ekle
+                durationMs: durationMs, 
                 type: 'VOTE' 
             }) 
         });
@@ -338,7 +328,6 @@ function Room({ user: currentUser }) {
           <img 
             src={`http://localhost:8080/avatars/${participantData.avatarId}.png`} 
             alt={`${name} avatar`}
-            // E-postaları karşılaştırarak 'moderator' sınıfını ekliyoruz
             className={`participant-avatar ${participantData.email === roomOwnerEmail ? 'moderator' : ''}`}
             onError={(e) => { e.target.onerror = null; e.target.src="http://localhost:8080/avatars/default-avatar.png" }}
           />
@@ -352,11 +341,9 @@ function Room({ user: currentUser }) {
         <span className="participant-name">{name}</span>
       </div>
       <div className="participant-vote-status">
-  {/* votes[name] artık bir obje: { voteValue, durationMs } */}
   {votes[name] && !revealVotes && (
     <span className="vote-check">
       ✓ 
-      {/* Süre varsa saniye cinsinden göster */}
       {votes[name].durationMs && (
         <span className="vote-duration">
   ({formatDuration(votes[name].durationMs)})
@@ -376,17 +363,14 @@ function Room({ user: currentUser }) {
               <div className="timer-display">{timer}</div>
             </div>
           )}
-         {/* Tüm moderatör butonları için bir sarmalayıcı */}
 <div className="moderator-controls">
   
-  {/* Oyları Göster Butonu */}
   {isModerator && activeTask.title !== 'Henüz bir görev belirlenmedi.' && !revealVotes && (
     <button onClick={handleRevealVotes} disabled={!allVotesIn} className="reveal-button side-panel-button">
       Oyları Göster
     </button>
   )}
   
-  {/* Oylar Gösterildikten Sonraki Butonlar */}
   {revealVotes && isModerator && (
     <div className="moderator-actions">
       <button onClick={handleNewRound} className="reveal-button side-panel-button"> 
@@ -398,7 +382,6 @@ function Room({ user: currentUser }) {
     </div>
   )}
   
-  {/* Yeni Görev Ekle Butonu - YENİ YERİ */}
   {isModerator && (
       <button onClick={toggleTaskForm} className="reveal-button new-task-button side-panel-button"> 
           {showTaskForm ? 'Formu Kapat' : 'Yeni Görev Ekle'}
@@ -411,7 +394,6 @@ function Room({ user: currentUser }) {
         </div>
         <div className="main-panel">
           <TaskDisplay task={activeTask} />
-                    {/* Sayaç, sadece bir oylama aktifken ve oylar henüz gösterilmemişken görünür */}
           
           {showTaskForm && isModerator ? (
               <TaskForm roomId={roomId} onTaskCreated={handleTaskCreated} />
@@ -423,8 +405,8 @@ function Room({ user: currentUser }) {
                       {consensus && (
   <RevealedCard 
     isConsensus={true} 
-    consensusValue={consensus.text} // Ana metin
-    consensusAverage={consensus.average} // Ortalama (varsa)
+    consensusValue={consensus.text} 
+    consensusAverage={consensus.average} 
   />
 )}
                       
@@ -432,7 +414,7 @@ function Room({ user: currentUser }) {
   <RevealedCard
     key={name}
     name={name}
-    vote={voteData.voteValue} // Sadece 'voteValue' değerini gönder
+    vote={voteData.voteValue} 
     avatarId={participants[name]?.avatarId}
     isAI={name === AI_PARTICIPANT_NAME}
   />

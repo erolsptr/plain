@@ -36,8 +36,7 @@ def get_ai_estimation(task_data):
     # Duruma göre prompt'u dinamik olarak oluştur
     if task_history:
         history_context = "For context, here are some previously estimated tasks by this team:\n"
-        # Sadece en son 5 görevi referans alalım ki prompt çok büyümesin.
-        for task in task_history[:5]: 
+        for task in task_history[:10]: 
             history_context += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
         
         prompt = (
@@ -85,8 +84,6 @@ def get_ai_estimation(task_data):
 
         response_data = json.loads(response_text)
         
-        # Gelen 'vote' bir sayı (1.5) veya string ("1.5") olabilir.
-        # Her durumu da ele almak için, gelen değeri alıp her zaman string'e çeviriyoruz.
         ai_vote = str(response_data.get("vote"))
         ai_reasoning = response_data.get("reasoning", "No reasoning provided.")
 

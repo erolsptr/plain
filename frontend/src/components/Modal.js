@@ -10,7 +10,6 @@ function Modal({ isOpen, onClose, children }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close-button" onClick={onClose}>
-          × {/* Bu, 'X' (çarpı) işaretidir */}
         </button>
         {children}
       </div>

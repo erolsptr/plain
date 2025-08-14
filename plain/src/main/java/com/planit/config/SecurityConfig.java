@@ -36,19 +36,14 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/api/internal/**", "/ws-poker/**"))
         
         .authorizeHttpRequests(auth -> auth
-            // 1. ÖNCELİK: Statik kaynaklar ve ana sayfalar herkese açık
             .requestMatchers("/", "/index.html", "/static/**", "/avatars/**", "/*.png", "/*.ico", "/*.json").permitAll()
             
-            // 2. ÖNCELİK: Giriş/Kayıt ve AI callback yolları herkese açık
             .requestMatchers("/api/auth/**", "/api/internal/**").permitAll()
 
-            // 3. ÖNCELİK: WebSocket bağlantı noktası herkese açık
             .requestMatchers("/ws-poker/**").permitAll()
 
-            // 4. ÖNCELİK: Geri kalan TÜM /api/ yolları kimlik doğrulaması gerektirir
             .requestMatchers("/api/**").authenticated()
             
-            // 5. GÜVENLİK AĞI: Yukarıdakilere uymayan diğer tüm istekler de kimlik doğrulaması gerektirir
             .anyRequest().authenticated()
         )
         

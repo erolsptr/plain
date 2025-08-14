@@ -29,7 +29,6 @@ function DashboardPage({ user }) {
       return;
     }
     try {
-      // Adım 1: Temel oda listesini çek
       const roomsResponse = await fetch('/api/rooms', { headers: { 'Authorization': `Bearer ${token}` } });
       if (!roomsResponse.ok) throw new Error('Odalar alınamadı.');
       const baseRooms = await roomsResponse.json();
@@ -40,7 +39,6 @@ function DashboardPage({ user }) {
         return;
       }
 
-      // Adım 2: Çekilen odaların ID'leriyle, bu odaların detaylarını (isimlerini) çek
       const roomIds = baseRooms.map(room => room.roomId).join(',');
       const detailsResponse = await fetch(`/api/room-details?roomIds=${roomIds}`, { headers: { 'Authorization': `Bearer ${token}` } });
       
@@ -51,7 +49,6 @@ function DashboardPage({ user }) {
         console.error('Oda detayları alınamadı. Sadece temel bilgiler gösterilecek.');
       }
 
-      // Adım 3: İki listeyi birleştir
       const enrichedRooms = baseRooms.map(room => {
         const detail = roomDetails.find(d => d.roomId === room.roomId);
         return {
@@ -143,14 +140,12 @@ function DashboardPage({ user }) {
     const token = sessionStorage.getItem('token');
     if (!token) { alert("Yetkilendirme anahtarı bulunamadı."); return; }
     try {
-      // Önce asıl odayı silmeyi dene, bu ana işlem
       const roomDeleteResponse = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (!roomDeleteResponse.ok) {
         if (roomDeleteResponse.status === 403) { throw new Error("Bu odayı silme yetkiniz bulunmuyor."); }
         throw new Error("Oda sunucudan silinemedi.");
       }
       
-      // Ana oda başarıyla silindiyse, ilişkili detayları da sil
       await fetch(`/api/room-details/${roomId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       
       setRooms(currentRooms => currentRooms.filter(room => room.roomId !== roomId));

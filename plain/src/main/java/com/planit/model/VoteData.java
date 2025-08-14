@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class VoteData {
     private String voteValue;
-    private Long durationMs; // Oy verme süresi (milisaniye)
+    private Long durationMs; // Oy verme süresi
 }

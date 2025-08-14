@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
 
 import logo from '../assets/logo.png'; 
-// --- 1. YENİ BİLEŞENİ İMPORT ET ---
 import ThemeToggle from './ThemeToggle';
 
 function Navbar({ user, onLogout }) {
@@ -44,7 +43,6 @@ function Navbar({ user, onLogout }) {
                   Çıkış Yap
                 </button>
               </li>
-              {/* --- 2. TEMA DEĞİŞTİRİCİYİ BURAYA EKLE --- */}
               <li className="navbar-item">
                 <ThemeToggle />
               </li>
@@ -61,7 +59,6 @@ function Navbar({ user, onLogout }) {
                   Kayıt Ol
                 </Link>
               </li>
-              {/* --- 3. TEMA DEĞİŞTİRİCİYİ BURAYA DA EKLE (Kullanıcı giriş yapmamışken) --- */}
               <li className="navbar-item">
                 <ThemeToggle />
               </li>
