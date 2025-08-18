@@ -889,3 +889,35 @@ body.light-theme .start-voting-btn {
 body.light-theme .start-voting-btn:hover {
     color: var(--text-color-dark); 
 }
+/* Room.css dosyasının en sonuna eklenecek */
+
+/* Jira Butonu Stili */
+button.jira {
+    background-color: #0052CC; /* Jira'nın mavi rengi */
+    color: white;
+}
+button.jira:hover:not(:disabled) {
+    background-color: #0065FF;
+}
+button.jira:disabled {
+    background-color: #091E42 !important;
+    opacity: 0.7;
+}
+
+/* Jira Durum Mesajı Stilleri */
+.jira-status-message {
+    font-size: 0.9rem;
+    padding: 8px;
+    margin-top: 10px;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 500;
+}
+.jira-status-message.success {
+    background-color: rgba(72, 187, 120, 0.2);
+    color: var(--success-color);
+}
+.jira-status-message.error {
+    background-color: rgba(245, 101, 101, 0.2);
+    color: var(--error-color);
+}

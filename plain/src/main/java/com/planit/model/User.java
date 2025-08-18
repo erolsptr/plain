@@ -82,4 +82,18 @@ public class User implements UserDetails {
         User user = (User) o;
         return id != null ? id.equals(user.id) : user.id == null;
     }
+    @Column(name = "jira_url")
+    private String jiraUrl;
+
+    @Column(name = "jira_email")
+    private String jiraEmail;
+
+    @Column(name = "jira_api_token")
+    private String jiraApiToken;
+
+    @Column(name = "jira_project_key")
+    private String jiraProjectKey;
+    
+    @Column(name = "jira_point_hour_ratio")
+    private Double jiraPointHourRatio;
 }

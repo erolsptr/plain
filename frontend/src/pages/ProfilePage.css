@@ -7,7 +7,6 @@
   align-items: flex-start;
 }
 
-/* Sol Taraftaki Sekme Menüsü */
 .profile-tabs {
   flex: 0 0 200px;
   display: flex;
@@ -41,7 +40,6 @@
   border-left: 3px solid var(--primary-color);
 }
 
-/* Sağ Taraftaki İçerik Alanı */
 .profile-content {
   flex: 1;
   background-color: var(--panel-color);
@@ -58,7 +56,6 @@
   padding-bottom: 15px;
 }
 
-/* Genel Form Stilleri */
 .form-group {
   margin-bottom: 25px;
 }
@@ -70,22 +67,8 @@
   color: var(--text-color-muted);
 }
 
-.form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  color: var(--text-color);
-}
+/* Not: input stilleri artık index.css'ten geldiği için buradakiler kaldırıldı. */
 
-.form-group input:disabled {
-  background-color: var(--panel-hover-color);
-  cursor: not-allowed;
-}
-
-/* Avatar Seçim Alanı */
 .avatar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -100,62 +83,22 @@
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   object-fit: cover;
+  background-color: var(--bg-color-light); /* Arkaplan ekleyerek boşken bile görünmesini sağlar */
 }
 
 .avatar-option:hover {
   transform: scale(1.1);
-  border-color: var(--primary-color-light);
+  border-color: var(--primary-color);
 }
 
 .avatar-option.selected {
   border-color: var(--success-color);
   transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(26, 188, 156, 0.5);
 }
 
-/* Kaydet Butonu */
-.save-changes-btn {
-  width: 100%;
-  padding: 15px;
-  margin-top: 20px;
-  font-size: 1rem;
-  font-weight: bold;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
+/* Buton stilleri index.css'ten geldiği için .save-changes-btn kaldırıldı. */
+/* JS'de bu sınıfa sahip tüm butonlar genel <button> stilini kullanacak. */
 
-.save-changes-btn:hover:not(:disabled) {
-  background-color: var(--primary-color-dark);
-}
-
-.save-changes-btn:disabled {
-  background-color: var(--border-color);
-  cursor: not-allowed;
-}
-
-/* Hesabı Sil Bölümü */
-.delete-account-zone p {
-  line-height: 1.6;
-  color: var(--text-color-muted);
-  background-color: rgba(231, 76, 60, 0.1);
-  border: 1px solid var(--danger-color);
-  padding: 15px;
-  border-radius: 8px;
-}
-
-.save-changes-btn.danger {
-  background-color: var(--danger-color);
-}
-
-.save-changes-btn.danger:hover:not(:disabled) {
-  background-color: #c0392b; /* Kırmızının daha koyu tonu */
-}
-
-/* Başarı/Hata Mesajları */
 .feedback-message {
   margin-top: 20px;
   padding: 15px;
@@ -165,136 +108,78 @@
 }
 
 .feedback-message.success {
-  background-color: rgba(46, 204, 113, 0.15);
+  background-color: rgba(72, 187, 120, 0.15);
   color: var(--success-color);
   border: 1px solid var(--success-color);
 }
 
 .feedback-message.error {
-  background-color: rgba(231, 76, 60, 0.15);
-  color: var(--danger-color);
-  border: 1px solid var(--danger-color);
-}
-/* ProfilePage.css dosyasının en sonuna ekle */
-
-/* Açık temada, aktif olmayan menü linkinin rengini ayarla */
-body.light-theme .profile-menu a {
-    color: var(--text-color-muted); /* Soluk metin rengi */
+  background-color: rgba(245, 101, 101, 0.15);
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
 }
 
-/* Açık temada, aktif olan linkin rengi zaten doğru olmalı, ama garantileyelim */
-body.light-theme .profile-menu a.active {
-    color: var(--primary-color);
-}
-/* ProfilePage.css dosyasının en sonuna ekle */
 
-/* AÇIK TEMA DÜZELTMESİ (FARKLI YAKLAŞIM): */
-/* Linkin rengini doğrudan değiştirmek yerine, varsayılan rengini ayarlıyoruz. */
+/* === YENİ: JIRA FORMU İÇİN STİLLER === */
 
-/* Önce tüm linklerin rengini varsayılan olarak soluk yapalım */
-body.light-theme .profile-menu a {
+.form-description {
+    font-size: 0.9rem;
     color: var(--text-color-muted);
-    transition: color 0.2s ease, background-color 0.2s ease;
+    margin-top: -20px;
+    margin-bottom: 30px;
+    line-height: 1.5;
 }
 
-/* Sonra aktif olanı veya üzerine gelineni renklendirelim */
-body.light-theme .profile-menu a.active,
-body.light-theme .profile-menu a:hover {
-    color: var(--primary-color);
-    background-color: var(--bg-color-light);
-}
-/* ProfilePage.css dosyasının en sonuna eklenecek */
-
-/* =================================================================== */
-/* === PROFİL MENÜSÜ AÇIK TEMA RENK DÜZELTMESİ (NİHAİ ÇÖZÜM) === */
-/* =================================================================== */
-
-/* 1. ADIM: Her iki temada da, menüdeki linklerin varsayılan rengini
-   ana metin rengiyle aynı yapalım. Bu, 'beyaz üstüne beyaz' sorununu
-   her koşulda engeller. */
-.profile-menu a {
-    color: var(--text-color); /* Varsayılan renk: Koyu temada açık, açık temada koyu */
-    background-color: transparent; /* Arka planı sıfırla */
-    transition: all 0.2s ease;
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-color-muted);
+    margin-top: 8px;
+    display: block;
 }
 
-/* 2. ADIM: Linkin üzerine gelindiğinde veya AKTİF olduğunda
-   arka planını renklendirip, metni daha da belirgin hale getirelim. */
-.profile-menu a:hover,
-.profile-menu a.active {
-    color: var(--primary-color); /* Metni vurgu rengi yap */
-    background-color: var(--bg-color-light); /* Arka planı hafifçe renklendir */
-}
-
-/* 3. ADIM (Güvenlik Önlemi): Açık temada istenmeyen bir durum olursa diye
-   renkleri bir kez daha, daha spesifik olarak tanımlayalım. Bu,
-   diğer tüm kuralları ezmesini garantiler. */
-body.light-theme .profile-menu a {
-    color: var(--text-color); /* Açık temada bu koyu bir renktir */
-}
-
-body.light-theme .profile-menu a:hover,
-body.light-theme .profile-menu a.active {
-    color: var(--primary-color);
-    background-color: var(--bg-color-light);
-}
-/* ProfilePage.css dosyasının en sonuna eklenecek */
-
-/* =================================================================== */
-/* === PROFİL SEKMELERİ İÇİN AÇIK TEMA RENK DÜZELTMESİ (NİHAİ) === */
-/* =================================================================== */
-
-/* 1. Varsayılan (aktif olmayan) sekme butonu için stiller */
-.profile-tabs button {
-    background: transparent;
-    border: none;
-    padding: 10px 20px;
-    font-size: 1.1rem;
+.form-hint a {
     font-weight: 500;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
-}
-
-/* 2. Aktif olan sekme butonu için stil */
-.profile-tabs button.active {
-    font-weight: 700;
-    border-bottom-color: var(--primary-color);
-}
-
-/* 3. SADECE AÇIK TEMA İÇİN RENK AYARI */
-/* Aktif olmayan butonun metin rengini ayarla */
-body.light-theme .profile-tabs button {
-    color: var(--text-color-muted);
-}
-
-/* Aktif olan butonun metin rengini ayarla */
-body.light-theme .profile-tabs button.active {
     color: var(--primary-color);
 }
+/* ProfilePage.css dosyasının en sonuna eklenecek */
+
+/* =================================================================== */
+/* === PROFİL SAYFASI ANA EYLEM BUTONLARI İÇİN STİL TANIMI === */
+/* =================================================================== */
+
+/* Bu kural, "Değişiklikleri Kaydet", "Şifreyi Değiştir" ve
+   "Entegrasyon Bilgilerini Kaydet" butonlarının tümünü hedefler. */
 .save-changes-btn {
-    background-color: var(--primary-color);
-    color: var(--text-color-dark); /* Metin rengi her zaman açık/beyaz */
-    border: none;
-    padding: 12px 20px;
-    font-size: 1rem;
+    width: 100%;
+    margin-top: 10px;
+    
+    /* index.css'teki genel <button> stiliyle tam tutarlılık sağlar */
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
-    border-radius: var(--border-radius-md, 8px);
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--border-radius-md);
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: all 0.2s ease;
+    background-color: var(--primary-color);
+    color: var(--text-color-dark);
+    font-size: 1rem;
 }
 
-/* 2. Sadece AÇIK TEMA'da, bu butonların ÜZERİNE GELİNCE
-      davranışlarını değiştirelim. */
-body.light-theme .save-changes-btn:hover:not(:disabled) {
-    background-color: var(--primary-color-hover); /* Arka planı koyulaştır */
-    transform: translateY(-2px); /* Hafif yukarı kalkma efekti */
-}
-
-/* 3. KOYU TEMA'da ise eski, beğendiğin şeffaflaşma efektini
-      korumak için bir kural yazalım. */
-/* :not(.light-theme) seçicisi, light-theme sınıfı YOKKEN anlamına gelir */
-body:not(.light-theme) .save-changes-btn:hover:not(:disabled) {
-    opacity: 0.8; /* Koyu temadaki şeffaflık efekti */
+.save-changes-btn:hover:not(:disabled) {
+    background-color: var(--primary-color-hover);
     transform: translateY(-2px);
+    box-shadow: var(--box-shadow);
+}
+
+.save-changes-btn:disabled {
+    background-color: var(--border-color);
+    color: var(--text-color-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+}
+#jiraPointHourRatio {
+    max-width: 200px; /* Genişliğinin formun tamamını kaplamasını engelle */
 }

@@ -1,6 +1,8 @@
 package com.planit.controller;
 
 import com.planit.model.User;
+import com.planit.model.dto.JiraDetailsRequest;
+import com.planit.model.dto.JiraDetailsResponse;
 import com.planit.model.dto.NameChangeRequest;
 import com.planit.model.dto.PasswordChangeRequest;
 import com.planit.model.dto.ProfileDTO;
@@ -62,4 +64,16 @@ public class ProfileController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+@GetMapping("/jira")
+public ResponseEntity<JiraDetailsResponse> getJiraDetails(Authentication authentication) {
+    JiraDetailsResponse details = profileService.getJiraDetails(authentication.getName());
+    return ResponseEntity.ok(details);
+}
+
+@PutMapping("/jira")
+public ResponseEntity<Void> updateJiraDetails(@RequestBody JiraDetailsRequest request, Authentication authentication) {
+    profileService.updateJiraDetails(authentication.getName(), request);
+    return ResponseEntity.ok().build();
+}
 }

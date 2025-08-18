@@ -1,6 +1,8 @@
 package com.planit.service;
 
 import com.planit.model.User;
+import com.planit.model.dto.JiraDetailsRequest;
+import com.planit.model.dto.JiraDetailsResponse;
 import com.planit.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -60,4 +62,31 @@ public class ProfileService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
+
+@Transactional
+public JiraDetailsResponse getJiraDetails(String userEmail) {
+    User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı"));
+    
+    return JiraDetailsResponse.builder()
+            .jiraUrl(user.getJiraUrl())
+            .jiraEmail(user.getJiraEmail())
+            .hasApiToken(user.getJiraApiToken() != null && !user.getJiraApiToken().isEmpty())
+            .jiraProjectKey(user.getJiraProjectKey())
+            .jiraPointHourRatio(user.getJiraPointHourRatio())
+            .build();
+}
+
+@Transactional
+public void updateJiraDetails(String userEmail, JiraDetailsRequest request) {
+    User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı"));
+
+    user.setJiraUrl(request.getJiraUrl());
+    user.setJiraEmail(request.getJiraEmail());
+    user.setJiraApiToken(request.getJiraApiToken());
+    user.setJiraProjectKey(request.getJiraProjectKey());
+    user.setJiraPointHourRatio(request.getJiraPointHourRatio());
+
+}
 }

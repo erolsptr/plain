@@ -8,6 +8,7 @@ import com.planit.model.dto.AIVoteRequest;
 import com.planit.model.dto.TaskCreationRequest;
 import com.planit.repository.UserRepository;
 import com.planit.service.RoomService;
+import com.planit.service.JiraService; // YENİ: JiraService'i import et
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,10 @@ public class PokerController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    // YENİ: JiraService'i enjekte et
+    @Autowired
+    private JiraService jiraService;
+
     @PostMapping("/api/rooms")
     public ResponseEntity<Map<String, String>> createRoom(Authentication authentication) {
         String ownerEmail = authentication.getName();
@@ -56,19 +61,38 @@ public class PokerController {
         return ResponseEntity.ok(Map.of("roomId", newRoomId));
     }
 
+    // YENİ: GÖREVİ JIRA'YA GÖNDERMEK İÇİN ENDPOINT
+    @PostMapping("/api/rooms/{roomId}/tasks/{taskId}/send-to-jira")
+    public ResponseEntity<Map<String, String>> sendTaskToJira(
+            @PathVariable String roomId,
+            @PathVariable Long taskId,
+            @RequestBody Map<String, String> payload, // Frontend'den consensusScore'u alacağız
+            Authentication authentication) {
+        
+        String userEmail = authentication.getName();
+        String consensusScore = payload.get("consensusScore");
+        
+        try {
+            String issueKey = jiraService.createJiraIssue(taskId, consensusScore, userEmail);
+            return ResponseEntity.ok(Map.of("message", "Görev başarıyla Jira'ya gönderildi!", "issueKey", issueKey));
+        } catch (Exception e) {
+            // Hata mesajını daha anlaşılır hale getir
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Jira'ya gönderme başarısız: " + e.getMessage()));
+        }
+    }
+    
+    // --- Buradan sonraki metotlar aynı kalıyor ---
+
     @PostMapping("/api/internal/ai-vote")
     public ResponseEntity<Void> receiveAIVote(@RequestBody AIVoteRequest voteRequest) {
         logger.info("Received AI vote from Python server: {}", voteRequest.toString());
-        
         roomService.recordAIVote(
             voteRequest.getRoomId(), 
             voteRequest.getVoterName(), 
             voteRequest.getVoteValue(), 
             voteRequest.getReasoning()
         );
-        
         publishFullRoomState(voteRequest.getRoomId());
-        
         logger.info("AI vote and reasoning processed, full room state broadcasted for room: {}", voteRequest.getRoomId());
         return ResponseEntity.ok().build();
     }

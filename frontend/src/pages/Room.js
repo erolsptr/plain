@@ -108,6 +108,7 @@ function Room({ user: currentUser }) {
   const [activeParticipants, setActiveParticipants] = useState(new Set());
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [timer, setTimer] = useState('00:00');
+  const [jiraStatus, setJiraStatus] = useState({ state: 'idle', message: '' }); // idle, sending, success, error
 
   const fetchTasks = useCallback(async () => {
     const token = sessionStorage.getItem('token');
@@ -281,6 +282,46 @@ function Room({ user: currentUser }) {
       alert(error.message);
     }
   };
+    const handleSendToJira = async () => {
+    if (!isModerator || !activeTask?.id || !consensus?.text) return;
+
+    // "Anlaşma Yok" durumunda Jira'ya göndermeyi engelle
+    if (consensus.text === "Anlaşma Yok") {
+        alert("Karar oyunda anlaşma sağlanamadığı için görev Jira'ya gönderilemez.");
+        return;
+    }
+
+    setJiraStatus({ state: 'sending', message: 'Jira\'ya gönderiliyor...' });
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+        setJiraStatus({ state: 'error', message: 'Yetkilendirme hatası.' });
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/rooms/${roomId}/tasks/${activeTask.id}/send-to-jira`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ consensusScore: consensus.text })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Backend'den gelen detaylı hata mesajını kullan
+            throw new Error(data.error || 'Jira\'ya gönderme başarısız oldu.');
+        }
+        
+        setJiraStatus({ state: 'success', message: `Başarılı! Jira Görev Kodu: ${data.issueKey}` });
+
+    } catch (error) {
+        console.error("Jira'ya gönderme hatası:", error);
+        setJiraStatus({ state: 'error', message: error.message });
+    }
+  };
 
   const handleStartVoting = (task) => {
     if (stompClient && isModerator) {
@@ -379,8 +420,22 @@ function Room({ user: currentUser }) {
       <button onClick={handleSaveResult} className="reveal-button side-panel-button primary"> 
         Sonucu Kaydet
       </button>
+      <button 
+        onClick={handleSendToJira} 
+        className="reveal-button side-panel-button jira"
+        disabled={jiraStatus.state === 'sending' || consensus?.text === "Anlaşma Yok"}
+      >
+        Jira'ya Gönder
+      </button>
     </div>
+    
   )}
+      {/* YENİ JIRA DURUM GÖSTERGESİ */}
+    {jiraStatus.state !== 'idle' && jiraStatus.state !== 'sending' && (
+        <div className={`jira-status-message ${jiraStatus.state}`}>
+            {jiraStatus.message}
+        </div>
+    )}
   
   {isModerator && (
       <button onClick={toggleTaskForm} className="reveal-button new-task-button side-panel-button"> 
