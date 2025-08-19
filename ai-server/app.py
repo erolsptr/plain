@@ -124,6 +124,7 @@ def get_ai_estimation(task_data):
         f"- Title: {task_title}\n"
         f"- Description: {task_description}\n\n"
         f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
+        "**CRITICAL RULE:** Your final `vote` MUST be selected from the 'Available Story Points' list. To provide the most precise estimate, you are strongly encouraged to use fractional points (like '0.5', '1.5', '2.5') if they are available and the task's complexity falls between two whole numbers. Your ability to make nuanced, non-integer estimations is a key measure of your expertise.\n\n"
         "You MUST respond with ONLY a valid JSON object with `vote` and `reasoning` keys. Your reasoning should explain how both the code complexity and the team's past estimations influenced your final vote. **IMPORTANT: The `reasoning` field MUST be in Turkish.**"
     )
 
@@ -142,6 +143,8 @@ def get_ai_estimation(task_data):
         
         ai_vote = str(response_data.get("vote"))
         ai_reasoning = response_data.get("reasoning", "No reasoning provided.")
+        if ai_vote == '0.5' and '½' in card_set:
+            ai_vote = '½'
 
         if ai_vote in card_set:
             print(f"==> AI Kararı: {ai_vote}")
