@@ -7,10 +7,11 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import Room from './pages/Room';
-import ProfilePage from './pages/ProfilePage'; // YENİ SAYFA IMPORTU
+import ProfilePage from './pages/ProfilePage';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
+import ProjectsPage from './pages/ProjectsPage';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -24,7 +25,6 @@ function App() {
     setCurrentUser(user);
   };
 
-  // YENİ FONKSİYON: Kullanıcı bilgilerini (örn: avatar) günceller
   const handleUserUpdate = (updatedUserData) => {
     const updatedUser = { ...currentUser, ...updatedUserData };
     sessionStorage.setItem('user', JSON.stringify(updatedUser));
@@ -71,6 +71,15 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          {/* DEĞİŞİKLİK BURADA YAPILDI */}
+          <Route 
+            path="/projects" 
+            element={
+              <ProtectedRoute user={currentUser}>
+                <ProjectsPage user={currentUser} />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/room/:roomId" 
             element={
@@ -79,19 +88,18 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* YENİ ROTA: Profil sayfası */}
           <Route 
-  path="/profile" 
-  element={
-    <ProtectedRoute user={currentUser}>
-      <ProfilePage 
-        user={currentUser} 
-        onUserUpdate={handleUserUpdate} 
-        onLogout={handleLogout}  // EKSİK OLAN PROP BURAYA EKLENDİ
-      />
-    </ProtectedRoute>
-  } 
-/>
+            path="/profile" 
+            element={
+              <ProtectedRoute user={currentUser}>
+                <ProfilePage 
+                  user={currentUser} 
+                  onUserUpdate={handleUserUpdate} 
+                  onLogout={handleLogout} 
+                />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
     </div>

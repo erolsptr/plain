@@ -1,0 +1,12 @@
+Flask
+requests
+google-generativeai
+python-dotenv
+GitPython
+langchain
+langchain-community
+langchain-google-genai
+SQLAlchemy
+pgvector
+psycopg2-binary
+beautifulsoup4

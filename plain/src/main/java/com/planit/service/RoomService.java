@@ -382,25 +382,38 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         return pendingTasks;
     }
 
-    @Transactional
-    public void setActiveTask(String roomId, Task task, String requesterEmail) {
+        @Transactional
+    public void setActiveTask(String roomId, Task taskWithProjectId, String requesterEmail) {
         PokerRoom room = pokerRoomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Görev eklenecek oda veritabanında bulunamadı: " + roomId));
-        task.setPokerRoom(room);
-        Task taskToActivate = (task.getId() == null) ? taskRepository.save(task) : task;
+        
+        // Frontend'den gelen Task nesnesinin projectId'sini al
+        Long projectId = taskWithProjectId.getProjectId();
+        
+        // Veritabanı işlemleri için projectId'si olmayan temiz bir Task nesnesi kullanalım
+        taskWithProjectId.setPokerRoom(room);
+        Task taskToActivate = (taskWithProjectId.getId() == null) ? taskRepository.save(taskWithProjectId) : taskWithProjectId;
+        
         activeTasks.put(roomId, taskToActivate); 
         clearAllVotes(roomId);
         
         votingStartTimes.put(roomId, System.currentTimeMillis());
         
-        triggerAIEstimation(roomId, taskToActivate, requesterEmail);
+        // triggerAIEstimation metoduna projectId'yi de gönder
+        triggerAIEstimation(roomId, taskToActivate, projectId, requesterEmail);
     }
 
-    private void triggerAIEstimation(String roomId, Task task, String requesterEmail) {
+        private void triggerAIEstimation(String roomId, Task task, Long projectId, String requesterEmail) {
         Set<String> participants = rooms.get(roomId);
         if (participants == null || !participants.contains(AI_PARTICIPANT_NAME)) {
             logger.info("AI participant '{}' is not in room {}. Skipping estimation.", AI_PARTICIPANT_NAME, roomId);
             return;
         }
+
+        // Proje ID'si seçilmemişse, kod analizi yapmadan devam et
+        if (projectId == null) {
+            logger.info("Kod analizi için proje seçilmedi. Standart tahminleme yapılıyor.");
+        }
+
         logger.info("Oylama geçmişi alınıyor ve AI için hazırlanıyor...");
         List<Map<String, Object>> fullHistory = getTaskHistoryForRoom(roomId, requesterEmail);
         List<Map<String, String>> simplifiedHistory = fullHistory.stream()
@@ -414,7 +427,9 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         if (simplifiedHistory.size() > HISTORY_LIMIT) {
             simplifiedHistory = simplifiedHistory.subList(0, HISTORY_LIMIT);
         }
-        logger.info("Triggering AI estimation for task: {} in room: {}. Including {} history items.", task.getId(), roomId, simplifiedHistory.size());
+
+        logger.info("Triggering AI estimation for task: {} in room: {}. Including {} history items. Project Context ID: {}", task.getId(), roomId, simplifiedHistory.size(), projectId);
+        
         Map<String, Object> payload = new HashMap<>();
         payload.put("roomId", roomId);
         payload.put("taskId", task.getId());
@@ -422,6 +437,8 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         payload.put("description", task.getDescription());
         payload.put("cardSet", task.getCardSet().split(","));
         payload.put("taskHistory", simplifiedHistory);
+        payload.put("projectId", projectId); 
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);

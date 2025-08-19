@@ -108,7 +108,11 @@ function Room({ user: currentUser }) {
   const [activeParticipants, setActiveParticipants] = useState(new Set());
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [timer, setTimer] = useState('00:00');
-  const [jiraStatus, setJiraStatus] = useState({ state: 'idle', message: '' }); // idle, sending, success, error
+  const [userProjects, setUserProjects] = useState([]);
+  const [taskProjectSelections, setTaskProjectSelections] = useState({});
+  const [jiraStatus, setJiraStatus] = useState({ state: 'idle', message: '' });
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiLoadingStatus, setAiLoadingStatus] = useState('');
 
   const fetchTasks = useCallback(async () => {
     const token = sessionStorage.getItem('token');
@@ -153,6 +157,25 @@ function Room({ user: currentUser }) {
     if (!user?.name || !user?.email) return;
     
     fetchTasks();
+    const fetchUserProjects = async () => {
+  const token = sessionStorage.getItem('token');
+  if (!token) return;
+  try {
+    const response = await fetch('/api/projects', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setUserProjects(data);
+      // Eğer kullanıcının projeleri varsa, varsayılan olarak ilkini seçelim
+      if (data.length > 0) {
+      }
+    }
+  } catch (error) {
+    console.error("Kullanıcı projeleri alınamadı:", error);
+  }
+};
+fetchUserProjects();
 
     let stateSub, revealSub, historySub; 
     const client = new Client({
@@ -209,6 +232,13 @@ function Room({ user: currentUser }) {
 
     return () => clearInterval(intervalId);
   }, [votingStartTime, revealVotes]);
+
+  useEffect(() => {
+    // Eğer bir aktif görev varsa (yani oylama başladıysa) ve yükleme ekranı hala açıksa, kapat.
+    if (activeTask && activeTask.id) {
+        setIsAiLoading(false);
+    }
+}, [activeTask]); // activeTask değiştiğinde bu efekti çalıştır
 
   const isModerator = user?.email === roomOwnerEmail;
   const allVotesIn = activeParticipants.size > 0 && activeParticipants.size === Object.keys(votes).length;
@@ -324,11 +354,20 @@ function Room({ user: currentUser }) {
   };
 
   const handleStartVoting = (task) => {
-    if (stompClient && isModerator) {
-      const payload = { ...task, sender: user.name };
-      stompClient.publish({ destination: `/app/room/${roomId}/set-task`, body: JSON.stringify(payload) });
-    }
-  };
+    if (!stompClient || !isModerator) return;
+    
+    // 1. Yükleme modalını göster ve aşamaları başlat
+    setIsAiLoading(true);
+    setAiLoadingStatus('Görev AI asistanına gönderiliyor...');
+    
+    setTimeout(() => setAiLoadingStatus('Kod tabanı ve geçmiş veriler analiz ediliyor...'), 2000);
+    setTimeout(() => setAiLoadingStatus('Tahmin ve gerekçe oluşturuluyor...'), 5000);
+
+    // 2. Asıl WebSocket mesajını backend'e gönder
+    const selectedProjectIdForTask = taskProjectSelections[task.id];
+    const payload = { ...task, projectId: selectedProjectIdForTask, sender: user.name };
+    stompClient.publish({ destination: `/app/room/${roomId}/set-task`, body: JSON.stringify(payload) });
+};
   
   const handleTaskCreated = () => { fetchTasks(); setShowTaskForm(false); };
   const toggleTaskForm = () => setShowTaskForm(prev => !prev);
@@ -404,6 +443,7 @@ function Room({ user: currentUser }) {
               <div className="timer-display">{timer}</div>
             </div>
           )}
+          
 <div className="moderator-controls">
   
   {isModerator && activeTask.title !== 'Henüz bir görev belirlenmedi.' && !revealVotes && (
@@ -500,16 +540,45 @@ function Room({ user: currentUser }) {
             <div className="task-list-content">
               {activeTab === 'pending' && (
                 pendingTasks.length > 0 ? (
-                  pendingTasks.map(task => (
-                    <div key={task.id} className="pending-task-card">
-                      <span>{task.title}</span>
-                      {isModerator && (
-                        <button onClick={() => handleStartVoting(task)} className="start-voting-btn">
-                          Oylamayı Başlat
-                        </button>
-                      )}
-                    </div>
-                  ))
+pendingTasks.map(task => (
+  <div key={task.id} className="pending-task-card">
+    <span className="pending-task-title">{task.title}</span>
+    
+    {/* Proje seçim menüsü artık her görevin kendi satırında */}
+    {isModerator && (
+      <div className="task-actions">
+        {userProjects.length > 0 ? (
+          <select 
+  // Değerini, bu spesifik görevin ID'sine karşılık gelen proje ID'sinden al
+  value={taskProjectSelections[task.id] || ''} 
+  onChange={(e) => {
+      const newSelections = {
+          ...taskProjectSelections, // objenin geri kalanını koru
+          [task.id]: e.target.value // sadece bu görevin seçimini güncelle
+      };
+      setTaskProjectSelections(newSelections);
+  }}
+  onClick={(e) => e.stopPropagation()}
+  className="task-project-select"
+>
+  <option value="">Kod Analizi Yok</option>
+  {userProjects.map(project => (
+    <option key={project.id} value={project.id}>
+      {project.name}
+    </option>
+  ))}
+</select>
+        ) : (
+          <span className="no-projects-info">Proje Yok</span>
+        )}
+        <button onClick={() => handleStartVoting(task)} className="start-voting-btn">
+          Oylamayı Başlat
+        </button>
+      </div>
+    )}
+  </div>
+))
+// --- DEĞİŞİKLİK SONU ---
                 ) : <p className="placeholder-text">Oylanacak hazır görev yok.</p>
               )}
 
@@ -590,6 +659,14 @@ function Room({ user: currentUser }) {
           </div>
         )}
       </Modal>
+      {/* AI Yükleme Modalı */}
+<Modal isOpen={isAiLoading} onClose={() => {}} isCloseButtonHidden={true}>
+    <div className="ai-loading-modal">
+        <div className="spinner"></div>
+        <h3>plAIn Asistanı Düşünüyor...</h3>
+        <p>{aiLoadingStatus}</p>
+    </div>
+</Modal>
     </>
   );
 }

@@ -1,0 +1,225 @@
+/* ProjectsPage.css - BEĞENİLEN ESKİ YAPI + MODERN BİLEŞENLER */
+
+.projects-page-container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* === HEADER BÖLÜMÜ === */
+.projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.projects-header h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+/* Header'daki "Yeni Proje Ekle" butonu için index.css stilini zorla */
+.projects-header button {
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: var(--text-color-dark);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+.projects-header button:hover:not(:disabled) {
+    background-color: var(--primary-color-hover);
+    transform: translateY(-2px);
+}
+
+
+/* === PROJE KARTLARI GRİDİ === */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+}
+
+/* ESKİ VE BEĞENİLEN KART YAPISINI GERİ GETİRDİK */
+.project-card {
+  /* Bu .panel sınıfı, index.css'ten temel arkaplan, border, gölge gibi stilleri alır */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Kart içi dikey boşluk */
+}
+
+.project-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* Hizalamayı düzelttik */
+}
+
+.project-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+.project-url {
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--text-color-muted);
+  word-break: break-all;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.project-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.project-status[data-status="PENDING"] {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+.project-status[data-status="COMPLETED"] {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.project-card-actions {
+  margin-top: auto; /* Butonları kartın en altına iter */
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end; /* Butonları sağa hizalar */
+}
+
+/* KART İÇİ BUTON STİLLERİNİ GÜNCELLEDİK */
+.btn-secondary, .btn-danger {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.btn-secondary {
+    background-color: var(--panel-hover-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--border-color);
+}
+.btn-danger {
+    background-color: transparent;
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+.btn-danger:hover {
+    background-color: var(--error-color);
+    color: white;
+}
+
+
+/* === YER TUTUCU VE MODAL === */
+.no-projects-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  background-color: var(--panel-color);
+  border-radius: var(--border-radius-md);
+  border: 1px dashed var(--border-color);
+}
+.no-projects-placeholder h3 {
+    margin-top: 0;
+}
+
+.create-project-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.create-project-modal h2 {
+    margin: 0;
+    text-align: center;
+}
+/* Modal içindeki input ve buttonlar için index.css stillerini zorla */
+.create-project-modal input,
+.create-project-modal button {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.error-message {
+  color: var(--error-color);
+  text-align: center;
+}
+/* ProjectsPage.css dosyasının en sonuna eklenecek */
+
+/* ======================================================= */
+/* === MODAL İÇİNDEKİ FORM ELEMANLARI İÇİN STİL DÜZELTMESİ === */
+/* ======================================================= */
+
+/* Modal'daki input alanına index.css'ten stil uygula */
+.create-project-modal input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--bg-color-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    color: var(--text-color);
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.create-project-modal input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(56, 178, 172, 0.3);
+}
+
+/* Modal'daki butona index.css'ten stil uygula */
+.create-project-modal button {
+    width: 100%;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: var(--text-color-dark);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.create-project-modal button:hover:not(:disabled) {
+    background-color: var(--primary-color-hover);
+    transform: translateY(-2px);
+}
+/* ProjectsPage.css'in en sonuna eklenecek */
+
+.confirm-delete-modal {
+  text-align: center;
+}
+.confirm-delete-modal h3 {
+  margin-top: 0;
+  color: var(--error-color);
+}
+.confirm-delete-modal p {
+  color: var(--text-color-muted);
+}
+.confirm-delete-modal strong {
+  color: var(--text-color);
+}
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}

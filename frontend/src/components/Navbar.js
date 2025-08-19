@@ -28,6 +28,11 @@ function Navbar({ user, onLogout }) {
                 </Link>
               </li>
               <li className="navbar-item">
+  <Link to="/projects" className="navbar-links">
+    Projelerim
+  </Link>
+</li>
+              <li className="navbar-item">
                 <Link to="/profile" className="navbar-profile-link">
                   <img 
                     src={`http://localhost:8080/avatars/${user.avatarId}.png`} 

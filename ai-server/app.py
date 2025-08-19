@@ -1,79 +1,135 @@
 from flask import Flask, request, jsonify
-import time
+import os
 import random
 import requests
-import google.generativeai as genai
 import json
-import os
 from dotenv import load_dotenv
+import google.generativeai as genai
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import create_engine, text, Column, BigInteger, String, Text, ForeignKey
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Proje klasöründeki .env dosyasından ortam değişkenlerini yükle
+# .env dosyasındaki değişkenleri yükle
 load_dotenv()
 
 app = Flask(__name__)
 
-# API Anahtarını ortam değişkeninden (environment variable) güvenli bir şekilde al
+# --- Google AI Kurulumu ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# Anahtarın yüklenip yüklenmediğini kontrol et. Yüklenmediyse, programı hata vererek durdur.
 if not GOOGLE_API_KEY:
-    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı. Lütfen ai-server klasöründeki .env dosyasını kontrol edin.")
-
+    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı.")
 genai.configure(api_key=GOOGLE_API_KEY)
 
+# --- Veritabanı Kurulumu (GÜVENLİ VE DOĞRU VERSİYON) ---
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+# Eğer herhangi bir bilgi eksikse, hata ver ve sunucuyu başlatma.
+if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+    raise ValueError("HATA: .env dosyasında veritabanı bağlantı bilgileri eksik (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).")
+
+DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+# SQLAlchemy ve Veritabanı Kurulumu (DATABASE_URL'den SONRA gelmeli)
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Veritabanı tablosunu temsil eden SQLAlchemy modeli
+class CodeChunk(Base):
+    __tablename__ = 'code_chunks'
+    id = Column(BigInteger, primary_key=True)
+    project_id = Column(BigInteger)
+    file_path = Column(String)
+    chunk_content = Column(Text)
+    embedding = Column(Vector(768))
+
 JAVA_API_CALLBACK_URL = "http://localhost:8080/api/internal/ai-vote"
+AI_PARTICIPANT_NAME = "plAIn Asistanı"
+
+
+def retrieve_relevant_code(query_text, project_id):
+    """
+    Verilen metne anlamsal olarak en yakın kod parçacıklarını veritabanından bulur.
+    """
+    if not query_text or project_id is None:
+        return ""
+
+    db_session = SessionLocal()
+    try:
+        embeddings_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GOOGLE_API_KEY)
+        query_embedding = embeddings_model.embed_query(query_text)
+
+        sql_query = text("""
+        SELECT chunk_content, file_path FROM code_chunks
+        WHERE project_id = :pid
+        ORDER BY embedding <-> CAST(:embedding AS vector)
+        LIMIT 3
+        """)
+        
+        results = db_session.execute(sql_query, {'pid': project_id, 'embedding': query_embedding}).fetchall()
+        
+        if not results:
+            return "No relevant code snippets found in the project's indexed files."
+
+        context = "For additional context, here are the most relevant code snippets from the project codebase:\n\n"
+        for i, (content, file_path) in enumerate(results):
+            context += f"--- Relevant Code Snippet #{i+1} from `{file_path}` ---\n"
+            context += f"```\n{content}\n```\n\n"
+        return context
+
+    except Exception as e:
+        print(f"HATA: Vektör aramasında bir sorun oluştu: {e}")
+        return "Could not retrieve code snippets due to a database error."
+    finally:
+        db_session.close()
+
 
 def get_ai_estimation(task_data):
     """
     Google Gemini modelini kullanarak görev için bir tahmin ve gerekçe üretir.
-    Artık görevi teknik adımlarına ayırıp analiz ederek daha derin bir gerekçe sunar.
+    Artık görevi, hem ilgili kod parçacıklarına hem de takımın geçmiş oylamalarına
+    bakarak, hibrit bir yaklaşımla analiz eder.
     """
     task_title = task_data.get('title', 'Başlık Yok')
     task_description = task_data.get('description', 'Açıklama Yok')
     card_set = task_data.get('cardSet', ['?'])
-    task_history = task_data.get('taskHistory', [])
+    project_id = task_data.get('projectId')
+    task_history = task_data.get('taskHistory', []) # Geçmiş oylamaları al
 
-    # Duruma göre prompt'u dinamik olarak oluştur
+    # Adım 1: Görev tanımına göre ilgili kod parçacıklarını bul
+    search_query = f"{task_title}\n{task_description}"
+    code_context = retrieve_relevant_code(search_query, project_id)
+
+    # Adım 2: Geçmiş oylama verisini prompt için formatla
+    history_context = ""
     if task_history:
-        history_context = "For context, here are some previously estimated tasks by this team:\n"
-        for task in task_history[:10]: 
+        history_context += "For team calibration, here are some of their recent estimations:\n"
+        for task in task_history: # Artık Java'dan limitli geldiği için burada tekrar limitlemeye gerek yok
             history_context += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
-        
-        prompt = (
-            "You are an expert software developer named 'plAIn' in a planning poker session. "
-            "Your task is to provide an estimate for the new user story below. Follow these steps:\n"
-            "1. **Break Down:** Deconstruct the new story into its core technical tasks (e.g., 'create API endpoint', 'update UI component', 'write database migration').\n"
-            "2. **Analyze Complexity:** Briefly assess the complexity, risks, or unknowns for each technical task.\n"
-            "3. **Estimate:** Based on your analysis and the team's past estimations provided below, choose the most suitable story point from the available options.\n"
-            "4. **Justify:** Your reasoning should be a concise summary of your analysis.\n\n"
-            f"**Team's Past Estimations (for reference):**\n{history_context}\n"
-            f"**New User Story to Estimate:**\n"
-            f"- **Title:** {task_title}\n"
-            f"- **Description:** {task_description}\n\n"
-            f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
-            "**Critical Instruction:** To provide the most accurate estimate, you are strongly encouraged to use fractional points (e.g., 1.5, 2.5) if the task's complexity does not perfectly align with a whole number. Demonstrating nuanced judgment by selecting non-integer values when appropriate is a key part of your function.\n\n"
-            "You MUST respond with ONLY a valid JSON object with two keys: 'vote' and 'reasoning'."
-        )
-    else:
-        prompt = (
-            "You are an expert software developer named 'plAIn' in a planning poker session. "
-            "This is the very first task for the team. Your task is to provide an estimate for the user story below. Follow these steps:\n"
-            "1. **Break Down:** Deconstruct the story into its core technical tasks (e.g., 'create API endpoint', 'update UI component', 'write database migration').\n"
-            "2. **Analyze Complexity:** Briefly assess the complexity, risks, or unknowns for each technical task.\n"
-            "3. **Estimate:** Based on your analysis, choose the most suitable story point from the available options.\n"
-            "4. **Justify:** Your reasoning should be a concise summary of your analysis. Do not refer to any past data.\n\n"
-            f"**User Story to Estimate:**\n"
-            f"- **Title:** {task_title}\n"
-            f"- **Description:** {task_description}\n\n"
-            f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
-            "**Critical Instruction:** To provide the most accurate estimate, you are strongly encouraged to use fractional points (e.g., 1.5, 2.5) if the task's complexity does not perfectly align with a whole number. Demonstrating nuanced judgment by selecting non-integer values when appropriate is a key part of your function.\n\n"
-            "You MUST respond with ONLY a valid JSON object with two keys: 'vote' and 'reasoning'."
-        )
+        history_context += "\n"
 
-    print("--- AI Beyni: Google Gemini'a son derece detaylı bir istek gönderiliyor... ---")
-    print(f"Geçmiş referansı: {len(task_history)} adet görev.")
+
+    # Adım 3: Yeni, hibrit prompt'u oluştur
+    prompt = (
+        "You are an expert software developer named 'plAIn'. Your task is to provide an estimate by synthesizing two types of information: the technical details from the code and the team's past estimation patterns.\n\n"
+        f"{code_context}" # Bulunan kod parçacıklarını ekle
+        f"{history_context}" # Takımın geçmiş oylamalarını ekle
+        "Based on BOTH the provided code AND the team's past estimations, analyze the new user story below:\n"
+        f"**New User Story to Estimate:**\n"
+        f"- Title: {task_title}\n"
+        f"- Description: {task_description}\n\n"
+        f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
+        "You MUST respond with ONLY a valid JSON object with `vote` and `reasoning` keys. Your reasoning should explain how both the code complexity and the team's past estimations influenced your final vote. **IMPORTANT: The `reasoning` field MUST be in Turkish.**"
+    )
+
+    print("--- AI Beyni: Hibrit (kod + geçmiş) prompt gönderiliyor... ---")
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-1.5-pro-latest')
         response = model.generate_content(prompt)
         
         response_text = response.text
@@ -110,14 +166,14 @@ def estimate_task():
     
     callback_payload = {
         "roomId": room_id,
-        "voterName": "plAIn Asistanı",
+        "voterName": AI_PARTICIPANT_NAME,
         "voteValue": ai_vote,
         "reasoning": ai_reasoning
     }
 
     try:
         print(f"--> Java backend'e oy gönderiliyor: {JAVA_API_CALLBACK_URL}")
-        requests.post(JAVA_API_CALLBACK_URL, json=callback_payload, timeout=5)
+        requests.post(JAVA_API_CALLBACK_URL, json=callback_payload, timeout=10) # Timeout'u artıralım
         print("--> Oy başarıyla gönderildi.")
     except requests.exceptions.RequestException as e:
         print(f"!!! HATA: Java backend'e oy gönderilemedi. Hata: {e}")

@@ -42,8 +42,10 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 
             .requestMatchers("/ws-poker/**").permitAll()
 
-            .requestMatchers("/api/**").authenticated()
-            
+            //.requestMatchers("/api/**").authenticated()
+
+            .requestMatchers("/api/rooms/**", "/api/profile/**", "/api/room-details/**", "/api/projects/**").authenticated()
+    
             .anyRequest().authenticated()
         )
         

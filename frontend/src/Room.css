@@ -921,3 +921,74 @@ button.jira:disabled {
     background-color: rgba(245, 101, 101, 0.2);
     color: var(--error-color);
 }
+/* Room.css dosyasındaki ilgili bloğu bununla değiştir */
+
+/* Room.css sonuna eklenecek */
+
+/* Hazır Olanlar listesindeki kartın yeni yapısı */
+.pending-task-card {
+    flex-wrap: wrap; /* Küçük ekranlarda alt alta geçsin */
+}
+.pending-task-title {
+    font-weight: 600;
+    margin-right: auto; /* Başlığı sola, eylemleri sağa iter */
+    padding-right: 20px;
+}
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0; /* Küçülmesini engelle */
+}
+
+/* Görev satırındaki yeni dropdown menü */
+.task-project-select {
+    background-color: var(--bg-color);
+    color: var(--text-color-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    max-width: 180px; /* Çok geniş olmasın */
+}
+.task-project-select:hover {
+    border-color: var(--primary-color);
+}
+
+.no-projects-info {
+    font-size: 0.85rem;
+    color: var(--text-color-muted);
+    font-style: italic;
+}
+/* Room.css sonuna eklenecek */
+
+.ai-loading-modal {
+    text-align: center;
+    padding: 20px;
+}
+
+.ai-loading-modal h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.ai-loading-modal p {
+    color: var(--text-color-muted);
+    min-height: 20px; /* Metin değişirken zıplamayı önler */
+}
+
+.spinner {
+    border: 5px solid var(--panel-hover-color);
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
