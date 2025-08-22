@@ -12,7 +12,7 @@ import com.planit.repository.PokerRoomRepository;
 import com.planit.repository.TaskRepository;
 import com.planit.repository.UserRepository;
 import com.planit.repository.VoteRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -145,34 +146,29 @@ public void kickUserFromRoom(String roomId, String usernameToKick) {
         return active;
     }
 
-    @Transactional
-    public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId) {
-        Set<String> participantNames = rooms.getOrDefault(roomId, Collections.emptySet());
-        if (participantNames.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        
-        Set<String> humanNames = participantNames.stream()
-                .filter(name -> !name.equals(AI_PARTICIPANT_NAME))
-                .collect(Collectors.toSet());
-        
-        Map<String, Map<String, String>> participantsMap = new HashMap<>();
-        if (!humanNames.isEmpty()) {
-            participantsMap = userRepository.findByNameIn(humanNames).stream()
-                .collect(Collectors.toMap(
-                    User::getName, 
-                    user -> Map.of(
-                        "avatarId", user.getAvatarId(),
-                        "email", user.getEmail()
-                    )
-                ));
-        }
-        
-        participantsMap.put(AI_PARTICIPANT_NAME, Map.of(
-            "avatarId", "bot",
-            "email", "ai@plain.com"
+@Transactional
+public Map<String, Map<String, String>> getParticipantsWithAvatars(String roomId) {
+    PokerRoom room = pokerRoomRepository.findById(roomId)
+            .orElseThrow(() -> new RuntimeException("Oda bulunamadı: " + roomId));
+
+    List<User> sortedParticipants = room.getParticipants().stream()
+            .sorted(Comparator.comparing(User::getId)) 
+            .collect(Collectors.toList());
+
+    Map<String, Map<String, String>> participantsMap = new LinkedHashMap<>();
+
+    for (User user : sortedParticipants) {
+        participantsMap.put(user.getName(), Map.of(
+            "avatarId", user.getAvatarId(),
+            "email", user.getEmail()
         ));
-        
+    }
+    
+    participantsMap.put(AI_PARTICIPANT_NAME, Map.of(
+        "avatarId", "bot",
+        "email", "ai@plain.com"
+    ));
+    
         return participantsMap;
     }
 
@@ -335,6 +331,33 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         votingStartTimes.remove(roomId);
     }
 
+@Transactional(readOnly = true)
+public Task findTaskById(Long taskId) {
+    return taskRepository.findById(taskId).orElse(null);
+}
+
+
+@Transactional
+public void deleteTask(Long taskId, String requesterEmail) {
+    User requester = userRepository.findByEmail(requesterEmail)
+            .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + requesterEmail));
+
+    Task taskToDelete = taskRepository.findById(taskId)
+            .orElseThrow(() -> new RuntimeException("Silinecek görev bulunamadı: " + taskId));
+
+    User roomOwner = taskToDelete.getPokerRoom().getOwner();
+
+    if (!roomOwner.getId().equals(requester.getId())) {
+        throw new AccessDeniedException("Sadece oda sahibi görevleri silebilir.");
+    }
+
+    if (!taskToDelete.getVotes().isEmpty() || aiVoteRepository.findByTaskId(taskId).isPresent()) {
+         throw new IllegalStateException("Oylanmış bir görev silinemez.");
+    }
+
+    taskRepository.deleteById(taskId);
+}
+
     @Transactional
     public void createRoom(String roomId, String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
@@ -386,10 +409,8 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
     public void setActiveTask(String roomId, Task taskWithProjectId, String requesterEmail) {
         PokerRoom room = pokerRoomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Görev eklenecek oda veritabanında bulunamadı: " + roomId));
         
-        // Frontend'den gelen Task nesnesinin projectId'sini al
         Long projectId = taskWithProjectId.getProjectId();
         
-        // Veritabanı işlemleri için projectId'si olmayan temiz bir Task nesnesi kullanalım
         taskWithProjectId.setPokerRoom(room);
         Task taskToActivate = (taskWithProjectId.getId() == null) ? taskRepository.save(taskWithProjectId) : taskWithProjectId;
         
@@ -398,9 +419,17 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
         
         votingStartTimes.put(roomId, System.currentTimeMillis());
         
-        // triggerAIEstimation metoduna projectId'yi de gönder
         triggerAIEstimation(roomId, taskToActivate, projectId, requesterEmail);
     }
+
+
+public void cancelVoting(String roomId) {
+    activeTasks.remove(roomId);
+    
+    clearAllVotes(roomId);
+    
+    logger.info("Oda {} için oylama iptal edildi. Oda başlangıç durumuna döndürüldü.", roomId);
+}
 
         private void triggerAIEstimation(String roomId, Task task, Long projectId, String requesterEmail) {
         Set<String> participants = rooms.get(roomId);
@@ -409,7 +438,6 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
             return;
         }
 
-        // Proje ID'si seçilmemişse, kod analizi yapmadan devam et
         if (projectId == null) {
             logger.info("Kod analizi için proje seçilmedi. Standart tahminleme yapılıyor.");
         }
@@ -486,4 +514,5 @@ public void saveCurrentVotingResult(String roomId, String requesterEmail) {
             }
         }
     }
+    
 }

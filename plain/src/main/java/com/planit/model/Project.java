@@ -25,8 +25,6 @@ public class Project {
     @Column(name = "github_url", nullable = false, unique = true, length = 512)
     private String githubUrl;
     
-    // Projenin indekslenme durumunu takip etmek için
-    // Olası değerler: PENDING, INDEXING, COMPLETED, FAILED
     @Column(name = "indexing_status", nullable = false)
     private String indexingStatus = "PENDING"; 
 
@@ -36,11 +34,9 @@ public class Project {
     @Column(name = "last_indexed_at")
     private LocalDateTime lastIndexedAt;
 
-    // Bu projenin hangi kullanıcıya ait olduğunu belirtir.
-    // Bir kullanıcı silindiğinde, ona ait projeler de silinir (CascadeType.ALL).
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore // API üzerinden bu bilgiyi doğrudan göstermeyelim.
+    @JsonIgnore 
     private User user;
 
     @Override

@@ -341,45 +341,6 @@
   
 }
 
-/* "Hazır Olanlar" Kartları */
-.pending-task-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--bg-color-light);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 15px 20px;
-  margin-bottom: 10px;
-  transition: all 0.2s ease;
-}
-
-.pending-task-card:hover {
-  border-color: var(--primary-color);
-  background-color: var(--panel-hover-color);
-}
-
-.pending-task-card span {
-  font-weight: 500;
-}
-
-.start-voting-btn {
-  background: none;
-  border: 1px solid var(--success-color);
-  color: var(--success-color);
-  padding: 8px 15px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.start-voting-btn:hover {
-  background-color: var(--success-color);
-  color: white;
-}
-
 .room-header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 15px;
@@ -889,11 +850,9 @@ body.light-theme .start-voting-btn {
 body.light-theme .start-voting-btn:hover {
     color: var(--text-color-dark); 
 }
-/* Room.css dosyasının en sonuna eklenecek */
 
-/* Jira Butonu Stili */
 button.jira {
-    background-color: #0052CC; /* Jira'nın mavi rengi */
+    background-color: #0052CC; 
     color: white;
 }
 button.jira:hover:not(:disabled) {
@@ -921,27 +880,65 @@ button.jira:disabled {
     background-color: rgba(245, 101, 101, 0.2);
     color: var(--error-color);
 }
-/* Room.css dosyasındaki ilgili bloğu bununla değiştir */
-
-/* Room.css sonuna eklenecek */
 
 /* Hazır Olanlar listesindeki kartın yeni yapısı */
 .pending-task-card {
-    flex-wrap: wrap; /* Küçük ekranlarda alt alta geçsin */
+  display: flex;
+  justify-content: space-between;
+  align-items: center; 
+  gap: 20px; 
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
 }
-.pending-task-title {
-    font-weight: 600;
-    margin-right: auto; /* Başlığı sola, eylemleri sağa iter */
-    padding-right: 20px;
+
+.pending-task-card:hover {
+  border-color: var(--primary-color);
+  background-color: var(--panel-hover-color);
+}
+
+.pending-task-card > span {
+  font-weight: 600;
+  flex-grow: 1; 
+  flex-shrink: 1;
+  word-break: break-word; 
+  min-width: 0; 
+}
+.pending-task-card.clickable {
+    cursor: pointer;
+}
+
+.pending-task-card.clickable:hover {
+    background-color: var(--panel-hover-color);
+}
+
+.start-voting-btn {
+  background: none;
+  border: 1px solid var(--success-color);
+  color: var(--success-color);
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap; 
+}
+
+.start-voting-btn:hover {
+  background-color: var(--success-color);
+  color: white;
 }
 .task-actions {
     display: flex;
     align-items: center;
     gap: 15px;
-    flex-shrink: 0; /* Küçülmesini engelle */
+    flex-shrink: 0; 
 }
 
-/* Görev satırındaki yeni dropdown menü */
 .task-project-select {
     background-color: var(--bg-color);
     color: var(--text-color-muted);
@@ -949,7 +946,7 @@ button.jira:disabled {
     border-radius: 6px;
     padding: 6px 10px;
     font-size: 0.85rem;
-    max-width: 180px; /* Çok geniş olmasın */
+    max-width: 180px; 
 }
 .task-project-select:hover {
     border-color: var(--primary-color);
@@ -960,7 +957,6 @@ button.jira:disabled {
     color: var(--text-color-muted);
     font-style: italic;
 }
-/* Room.css sonuna eklenecek */
 
 .ai-loading-modal {
     text-align: center;
@@ -975,7 +971,7 @@ button.jira:disabled {
 
 .ai-loading-modal p {
     color: var(--text-color-muted);
-    min-height: 20px; /* Metin değişirken zıplamayı önler */
+    min-height: 20px; 
 }
 
 .spinner {
@@ -991,4 +987,140 @@ button.jira:disabled {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.markdown-content {
+    text-align: left; 
+    line-height: 1.6;
+    color: var(--text-color-muted);
+}
+.markdown-content p {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+.markdown-content strong, .markdown-content b {
+    color: var(--text-color);
+    font-weight: 600;
+}
+.markdown-content ul, .markdown-content ol {
+    padding-left: 20px; 
+}
+.markdown-content li {
+    margin-bottom: 5px;
+}
+
+
+/* =================================================================== */
+/* === AI GEREKÇESİ TOOLTIP'İ İÇİN GELİŞTİRİLMİŞ STİLLER === */
+/* =================================================================== */
+
+.ai-reasoning-container:hover .ai-reasoning-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.ai-reasoning-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    
+    width: 1000px; 
+    max-width: 90vw; 
+
+    background-color: var(--bg-color-light);
+    color: var(--text-color-muted);
+    text-align: left;
+    border-radius: var(--border-radius-md);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow-lg);
+    
+    position: absolute;
+    z-index: 10;
+    bottom: 125%; 
+    left: 50%;
+    transform: translateX(-50%); 
+
+    transition: opacity 0.3s;
+}
+
+
+.ai-reasoning-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%; 
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--bg-color-light) transparent transparent transparent;
+}
+
+.ai-reasoning-tooltip .markdown-content {
+    font-size: 0.85rem; 
+    line-height: 1.5;
+}
+.ai-reasoning-tooltip .markdown-content p,
+.ai-reasoning-tooltip .markdown-content ul,
+.ai-reasoning-tooltip .markdown-content ol {
+    margin-bottom: 8px; 
+}
+
+.delete-task-btn {
+    background-color: transparent;
+    border: none;
+    color: var(--text-color-muted);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.delete-task-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: var(--error-color);
+}
+
+.voting-actions {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+}
+
+.voting-actions .side-panel-button {
+    flex-grow: 1; 
+}
+
+.side-panel-button.danger {
+    background-color: transparent;
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+}
+.side-panel-button.danger:hover {
+    background-color: var(--error-color);
+    color: white;
+}
+/* Room.css dosyasının en sonuna eklenecek */
+
+.cancellation-notice {
+    position: fixed; 
+    top: 80px; 
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--error-color);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 25px; 
+    font-weight: 500;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: fadeInOut 5s forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -20px); }
+    10% { opacity: 1; transform: translate(-50%, 0); }
+    90% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -20px); }
 }

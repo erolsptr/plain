@@ -1,62 +1,77 @@
 from flask import Flask, request, jsonify
 import os
 import random
+import re
 import requests
 import json
 from dotenv import load_dotenv
-import google.generativeai as genai
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import create_engine, text, Column, BigInteger, String, Text, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# .env dosyasındaki değişkenleri yükle
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 
-# --- Google AI Kurulumu ---
+# --- AI ve Veritabanı Kurulumu ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if not GOOGLE_API_KEY:
-    raise ValueError("HATA: GOOGLE_API_KEY ortam değişkeni bulunamadı.")
-genai.configure(api_key=GOOGLE_API_KEY)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# --- Veritabanı Kurulumu (GÜVENLİ VE DOĞRU VERSİYON) ---
+if not GOOGLE_API_KEY:
+    raise ValueError("HATA: GOOGLE_API_KEY .env dosyasında bulunamadı.")
+if not GROQ_API_KEY:
+    raise ValueError("HATA: GROQ_API_KEY .env dosyasında bulunamadı.")
+
+ai_model = ChatOpenAI(
+    model_name="meta-llama/llama-4-scout-17b-16e-instruct",
+    temperature=0.3,
+    openai_api_key=GROQ_API_KEY,
+    openai_api_base="https://api.groq.com/openai/v1"
+)
+
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 
-# Eğer herhangi bir bilgi eksikse, hata ver ve sunucuyu başlatma.
 if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-    raise ValueError("HATA: .env dosyasında veritabanı bağlantı bilgileri eksik (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME).")
+    raise ValueError("HATA: .env dosyasında veritabanı bağlantı bilgileri eksik.")
 
 DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-# SQLAlchemy ve Veritabanı Kurulumu (DATABASE_URL'den SONRA gelmeli)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Veritabanı tablosunu temsil eden SQLAlchemy modeli
+class Project(Base):
+    __tablename__ = 'projects'
+    id = Column(BigInteger, primary_key=True)
+
 class CodeChunk(Base):
     __tablename__ = 'code_chunks'
     id = Column(BigInteger, primary_key=True)
-    project_id = Column(BigInteger)
-    file_path = Column(String)
+    project_id = Column(BigInteger, ForeignKey('projects.id', ondelete="CASCADE"))
+    file_path = Column(String(1024))
     chunk_content = Column(Text)
     embedding = Column(Vector(768))
 
 JAVA_API_CALLBACK_URL = "http://localhost:8080/api/internal/ai-vote"
 AI_PARTICIPANT_NAME = "plAIn Asistanı"
 
+def extract_json_from_string(text):
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return None
 
 def retrieve_relevant_code(query_text, project_id):
-    """
-    Verilen metne anlamsal olarak en yakın kod parçacıklarını veritabanından bulur.
-    """
-    if not query_text or project_id is None:
+    if not query_text or not project_id:
         return ""
 
     db_session = SessionLocal()
@@ -65,18 +80,18 @@ def retrieve_relevant_code(query_text, project_id):
         query_embedding = embeddings_model.embed_query(query_text)
 
         sql_query = text("""
-        SELECT chunk_content, file_path FROM code_chunks
-        WHERE project_id = :pid
-        ORDER BY embedding <-> CAST(:embedding AS vector)
-        LIMIT 3
+            SELECT chunk_content, file_path FROM code_chunks
+            WHERE project_id = :pid
+            ORDER BY embedding <-> CAST(:embedding AS vector)
+            LIMIT 3
         """)
         
         results = db_session.execute(sql_query, {'pid': project_id, 'embedding': query_embedding}).fetchall()
         
         if not results:
-            return "No relevant code snippets found in the project's indexed files."
+            return "No relevant code snippets found in the project's indexed files.\n\n"
 
-        context = "For additional context, here are the most relevant code snippets from the project codebase:\n\n"
+        context = "Context from project code:\n"
         for i, (content, file_path) in enumerate(results):
             context += f"--- Relevant Code Snippet #{i+1} from `{file_path}` ---\n"
             context += f"```\n{content}\n```\n\n"
@@ -84,79 +99,86 @@ def retrieve_relevant_code(query_text, project_id):
 
     except Exception as e:
         print(f"HATA: Vektör aramasında bir sorun oluştu: {e}")
-        return "Could not retrieve code snippets due to a database error."
+        return "Could not retrieve code snippets due to a database error.\n\n"
     finally:
         db_session.close()
 
-
 def get_ai_estimation(task_data):
-    """
-    Google Gemini modelini kullanarak görev için bir tahmin ve gerekçe üretir.
-    Artık görevi, hem ilgili kod parçacıklarına hem de takımın geçmiş oylamalarına
-    bakarak, hibrit bir yaklaşımla analiz eder.
-    """
     task_title = task_data.get('title', 'Başlık Yok')
     task_description = task_data.get('description', 'Açıklama Yok')
     card_set = task_data.get('cardSet', ['?'])
     project_id = task_data.get('projectId')
-    task_history = task_data.get('taskHistory', []) # Geçmiş oylamaları al
+    task_history = task_data.get('taskHistory', [])
 
-    # Adım 1: Görev tanımına göre ilgili kod parçacıklarını bul
-    search_query = f"{task_title}\n{task_description}"
-    code_context = retrieve_relevant_code(search_query, project_id)
-
-    # Adım 2: Geçmiş oylama verisini prompt için formatla
+    code_context = retrieve_relevant_code(f"{task_title}\n{task_description}", project_id)
+    
+    # --- YENİ KOŞULLU PROMPT MANTIĞI ---
+    persona = "You are 'plAIn', a Senior Software Architect. Your analysis must be insightful, clear, and technically grounded. You must respond ONLY with a valid JSON object with `vote` and `reasoning` keys. The reasoning MUST be in Turkish.\n\n"
+    
+    analysis_requirements = (
+        "Your `reasoning` text MUST address the following points in a comprehensive paragraph:\n"
+        "- A breakdown of the core technical tasks involved.\n"
+        "- An analysis of the main complexities or risks.\n"
+    )
+    final_justification_instruction = "- A final justification for your chosen `vote`.\n\n"
+    voting_rule = "**VOTING RULE:** To provide a precise estimate, use fractional points (e.g., '1.5') if they are available and the task's complexity warrants it.\n\n"
+    
     history_context = ""
+    # Geçmiş varsa, hem karşılaştırma talimatını hem de geçmiş verisini ekle
     if task_history:
-        history_context += "For team calibration, here are some of their recent estimations:\n"
-        for task in task_history: # Artık Java'dan limitli geldiği için burada tekrar limitlemeye gerek yok
+        analysis_requirements += "- A comparison to a relevant past task.\n"
+        
+        history_context += "Past Estimations:\n"
+        for task in task_history:
             history_context += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
         history_context += "\n"
+    else:
+        # Geçmiş yoksa, bu durumu belirt
+        history_context += "Past Estimations:\nNo past estimations provided for this room.\n"
 
-
-    # Adım 3: Yeni, hibrit prompt'u oluştur
+    # Tüm parçaları birleştir
     prompt = (
-        "You are an expert software developer named 'plAIn'. Your task is to provide an estimate by synthesizing two types of information: the technical details from the code and the team's past estimation patterns.\n\n"
-        f"{code_context}" # Bulunan kod parçacıklarını ekle
-        f"{history_context}" # Takımın geçmiş oylamalarını ekle
-        "Based on BOTH the provided code AND the team's past estimations, analyze the new user story below:\n"
-        f"**New User Story to Estimate:**\n"
-        f"- Title: {task_title}\n"
-        f"- Description: {task_description}\n\n"
-        f"**Available Story Points:** {', '.join(map(str, card_set))}\n\n"
-        "**CRITICAL RULE:** Your final `vote` MUST be selected from the 'Available Story Points' list. To provide the most precise estimate, you are strongly encouraged to use fractional points (like '0.5', '1.5', '2.5') if they are available and the task's complexity falls between two whole numbers. Your ability to make nuanced, non-integer estimations is a key measure of your expertise.\n\n"
-        "You MUST respond with ONLY a valid JSON object with `vote` and `reasoning` keys. Your reasoning should explain how both the code complexity and the team's past estimations influenced your final vote. **IMPORTANT: The `reasoning` field MUST be in Turkish.**"
+        f"{persona}"
+        f"--- ANALYSIS REQUIREMENTS ---\n{analysis_requirements}{final_justification_instruction}"
+        f"{voting_rule}"
+        f"--- CONTEXT ---\n"
+        f"{code_context}"
+        f"{history_context}"
+        f"--- NEW TASK ---\n"
+        f"Title: {task_title}\n"
+        f"Description: {task_description}\n"
+        f"Available Points: {', '.join(map(str, card_set))}"
     )
 
-    print("--- AI Beyni: Hibrit (kod + geçmiş) prompt gönderiliyor... ---")
+    print("--- AI Beyni: Dinamik olarak oluşturulmuş hibrit prompt gönderiliyor... ---")
     try:
-        model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        response = model.generate_content(prompt)
+        response = ai_model.invoke([HumanMessage(content=prompt)])
         
-        response_text = response.text
-        print(f"--- Gemini'den gelen ham cevap: {response_text} ---")
+        print(f"--- Llama 4'ten gelen ham cevap: {response.content} ---")
 
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].strip().rstrip("`")
+        response_json = extract_json_from_string(response.content)
 
-        response_data = json.loads(response_text)
-        
-        ai_vote = str(response_data.get("vote"))
-        ai_reasoning = response_data.get("reasoning", "No reasoning provided.")
+        if not response_json:
+            raise ValueError("Modelden geçerli bir JSON alınamadı. Ham cevap: " + response.content)
+
+        ai_vote = str(response_json.get("vote"))
         if ai_vote == '0.5' and '½' in card_set:
             ai_vote = '½'
+        
+        ai_reasoning = response_json.get("reasoning", "No reasoning provided.")
 
         if ai_vote in card_set:
             print(f"==> AI Kararı: {ai_vote}")
-            print(f"==> Gerekçe: {ai_reasoning}\n")
+            print(f"==> Gerekçe:\n{ai_reasoning}\n")
             return ai_vote, ai_reasoning
         else:
-            print(f"!!! UYARI: Gemini geçersiz bir oy üretti ('{ai_vote}'). Geçerli oylar: {card_set}. Rastgele bir oy seçiliyor.")
+            print(f"!!! UYARI: Llama 4 geçersiz bir oy üretti ('{ai_vote}'). Geçerli oylar: {card_set}. Rastgele bir oy seçiliyor.")
             return random.choice(card_set), "AI'ın ürettiği oy geçersiz olduğu için rastgele bir seçim yapıldı."
 
     except Exception as e:
-        print(f"!!! HATA: Google Gemini ile iletişimde bir sorun oluştu: {e}. Rastgele bir oy seçiliyor.")
+        print(f"!!! HATA: AI servisiyle iletişimde bir sorun oluştu: {e}")
         return random.choice(card_set), "AI servisiyle iletişimde bir hata oluştuğu için rastgele bir seçim yapıldı."
+
 
 @app.route('/estimate', methods=['POST'])
 def estimate_task():
@@ -176,7 +198,7 @@ def estimate_task():
 
     try:
         print(f"--> Java backend'e oy gönderiliyor: {JAVA_API_CALLBACK_URL}")
-        requests.post(JAVA_API_CALLBACK_URL, json=callback_payload, timeout=10) # Timeout'u artıralım
+        requests.post(JAVA_API_CALLBACK_URL, json=callback_payload, timeout=10)
         print("--> Oy başarıyla gönderildi.")
     except requests.exceptions.RequestException as e:
         print(f"!!! HATA: Java backend'e oy gönderilemedi. Hata: {e}")

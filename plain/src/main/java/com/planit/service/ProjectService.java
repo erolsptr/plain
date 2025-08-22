@@ -66,7 +66,6 @@ public class ProjectService {
         projectRepository.deleteById(projectId);
     }
     
-    // YENİ METOT: İndeksleme işlemini başlatan metot
     @Transactional
     public Project startIndexing(Long projectId, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -79,16 +78,12 @@ public class ProjectService {
             throw new IllegalStateException("Bu projeyi indeksleme yetkiniz yok.");
         }
 
-        // Projenin durumunu "INDEXING" olarak ayarla ve eski hataları temizle
         project.setIndexingStatus("INDEXING");
         project.setIndexingError(null);
         projectRepository.save(project);
 
-        // İndeksleme betiğini ayrı bir thread'de (iş parçacığı) çalıştırarak
-        // API isteğinin anında cevap vermesini sağlıyoruz.
         new Thread(() -> {
             try {
-                // AI sunucusunun yolunu bul (proje yapısına göre ayarla)
                 String aiServerPath = new File("../ai-server").getCanonicalPath();
                 
                 ProcessBuilder processBuilder = new ProcessBuilder(
@@ -105,10 +100,8 @@ public class ProjectService {
 
                 Process process = processBuilder.start();
                 
-                // Betiğin bitmesini bekle
                 int exitCode = process.waitFor();
                 
-                // Betik tamamlandıktan sonra proje durumunu tekrar güncelle
                 Project finishedProject = projectRepository.findById(projectId).orElse(null);
                 if (finishedProject != null) {
                     if (exitCode == 0) {
@@ -117,7 +110,6 @@ public class ProjectService {
                         logger.info("Proje {} için indeksleme başarıyla tamamlandı.", projectId);
                     } else {
                         finishedProject.setIndexingStatus("FAILED");
-                        // Betiğin çıktısındaki hata mesajını almak daha iyi olurdu, şimdilik genel bir mesaj yazalım.
                         finishedProject.setIndexingError("İndeksleme betiği bir hatayla sonlandı. Çıkış kodu: " + exitCode);
                         logger.error("Proje {} için indeksleme başarısız oldu. Çıkış kodu: {}", projectId, exitCode);
                     }
@@ -126,20 +118,16 @@ public class ProjectService {
 
             } catch (IOException | InterruptedException e) {
                 logger.error("İndeksleme betiği başlatılamadı veya kesintiye uğradı.", e);
-                // Hata durumunda proje durumunu tekrar güncelle
                 Project failedProject = projectRepository.findById(projectId).orElse(null);
                 if (failedProject != null) {
                     failedProject.setIndexingStatus("FAILED");
                     failedProject.setIndexingError("Indexer script could not be started: " + e.getMessage());
                     projectRepository.save(failedProject);
                 }
-                // Thread.currentThread().interrupt() eklemek iyi bir pratiktir
                 Thread.currentThread().interrupt();
             }
         }).start();
 
-        // Metot, betiğin bitmesini beklemeden hemen döner.
-        // Frontend'e projenin "INDEXING" durumunda olduğunu bildirir.
         return project;
     }
 }

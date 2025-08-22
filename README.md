@@ -3,7 +3,7 @@
 ![Proje Durumu: Gelişmiş Özellikler - Stabil](https://img.shields.io/badge/status-advanced%20features-success)
 ![Backend: Java & Spring Boot](https://img.shields.io/badge/backend-Spring%20Boot-green)
 ![Frontend: React](https://img.shields.io/badge/frontend-React-blue)
-![AI: Python & RAG](https://img.shields.io/badge/ai-RAG%20(Gemini%20Pro)-purple)
+![AI: Llama 4 & RAG](https://img.shields.io/badge/ai-Llama%204%20(RAG)-purple)
 ![Veritabanı: PostgreSQL & pgvector](https://img.shields.io/badge/database-PostgreSQL%20%26%20pgvector-blue)
 
 **plAIn**, yazılım geliştirme ekiplerinin görev karmaşıklığını tahmin etme sürecini, **doğrudan projenin kod tabanını analiz eden** bir yapay zeka ile bir üst seviyeye taşıyan, web tabanlı bir planlama pokeri platformudur. Projenin en benzersiz özelliği, oylama oturumlarına katılan ve tahminlerini, o görevle ilgili gerçek kod parçacıklarına dayandıran bir yapay zeka ajanıdır.
@@ -12,9 +12,9 @@
 
 -   **Güvenli Kullanıcı Yönetimi:** Kayıt, giriş ve JWT tabanlı oturum yönetimi.
 -   **Kişiselleştirilebilir Profiller ve Temalar:** Kullanıcılar avatarlarını, isimlerini yönetebilir ve Açık/Koyu tema arasında geçiş yapabilir.
--   **Oda Yönetim Paneli:** Kullanıcıların katıldıkları odaları listeleyebildiği ve yeni odalar oluşturabildiği kişisel bir kontrol paneli.
--   **Gerçek Zamanlı Oylama Odası:** WebSocket tabanlı, anlık etkileşime olanak tanıyan dinamik oylama ortamı. Oylama süresini gösteren bir sayaç içerir.
--   **Moderatör Yetkileri:** Oda sahipleri görev ekleyebilir, oylamayı yönetebilir, sonuçları kaydedebilir ve katılımcıları yönetebilir.
+-   **Oda Yönetim Paneli:** Kullanıcıların katıldıkları odaları listeleyebildiği, yeni odalar oluşturabildiği ve sahip oldukları odaları silebildiği kişisel bir kontrol paneli.
+-   **Gerçek Zamanlı Oylama Odası:** WebSocket tabanlı, anlık etkileşime olanak tanıyan dinamik oylama ortamı. Oylama süresini gösteren bir sayaç ve her katılımcının oy verme süresi gibi detaylar içerir.
+-   **Gelişmiş Moderatör Yetkileri:** Oda sahipleri görev ekleyebilir, görevleri silebilir, oylamayı yönetebilir, oylamayı iptal edebilir, sonuçları kaydedebilir ve katılımcıları yönetebilir.
 
 ## 🚀 Gelişmiş ve Benzersiz Özellikler
 
@@ -44,7 +44,8 @@ Proje, her iş için en uygun teknolojiyi kullanma prensibiyle, birbirinden izol
 -   **AI Sunucusu (Python):**
     -   Python 3.x, Flask
     -   **LangChain:** Karmaşık AI iş akışlarını (kod parçalama, embedding) yönetmek için.
-    -   **Google Gemini Pro & Embedding Modelleri:** Dil anlama ve vektör oluşturma için.
+    -   **Groq & Llama 4:** Ultra hızlı ve akıllı dil anlama ve cevap üretme için.
+    -   **Google Gemini Embedding:** Kodun anlamsal vektörlerini oluşturmak için.
     -   **GitPython & SQLAlchemy:** GitHub repolarını yönetmek ve veritabanı ile iletişim kurmak için.
 
 ### Kritik Mimari Kararlar
@@ -63,19 +64,19 @@ Proje, her iş için en uygun teknolojiyi kullanma prensibiyle, birbirinden izol
 ### Kurulum
 
 1.  **Veritabanı (Docker):**
-    -   Proje ana dizininde bir `docker-compose.yml` dosyası oluşturun (örnekler için Docker dokümantasyonuna bakın).
-    -   İmaj olarak `pgvector/pgvector:pg16` veya üstünü kullanın.
+    -   Proje ana dizininde bir `docker-compose.yml` dosyası oluşturun.
+    -   İmaj olarak `pgvector/pgvector:pg16` veya üstünü kullanın ve şifre gibi ortam değişkenlerini ayarlayın.
     -   `docker-compose up -d` ile veritabanını başlatın.
     -   Veritabanına bağlanıp `CREATE EXTENSION vector;` komutunu çalıştırın.
 
 2.  **AI Sunucusu (Python - `ai-server` klasörü):**
-    -   Bir `.env` dosyası oluşturup `GOOGLE_API_KEY` ve veritabanı bağlantı bilgilerinizi (`DB_USER`, `DB_PASSWORD` vb.) ekleyin.
+    -   Bir `.env` dosyası oluşturup `GOOGLE_API_KEY`, `GROQ_API_KEY` ve veritabanı bağlantı bilgilerinizi (`DB_USER`, `DB_PASSWORD` vb.) ekleyin.
     -   Bağımlılıkları kurun: `pip install -r requirements.txt`
     -   Sunucuyu başlatın: `python app.py`
 
 3.  **Backend (Java - `plain` klasörü):**
     -   `plain/src/main/resources/application.properties` dosyasını, Docker'daki veritabanı ayarlarınızla güncelleyin.
-    -   `mvnw spring-boot:run` ile sunucuyu başlatın.
+    -   `./mvnw spring-boot:run` ile sunucuyu başlatın.
 
 4.  **Frontend (React - `frontend` klasörü):**
     -   Bağımlılıkları kurun: `npm install`

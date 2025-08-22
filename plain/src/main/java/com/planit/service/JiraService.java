@@ -33,7 +33,6 @@ public class JiraService {
 
 
 public String createJiraIssue(Long taskId, String consensusScore, String userEmail) {
-    // 1. Kullanıcıyı ve tüm Jira bilgilerini al
     User user = userRepository.findByEmail(userEmail)
             .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + userEmail));
 
@@ -41,7 +40,7 @@ public String createJiraIssue(Long taskId, String consensusScore, String userEma
     String jiraUserEmail = user.getJiraEmail();
     String apiToken = user.getJiraApiToken();
     String projectKey = user.getJiraProjectKey();
-    Double pointHourRatio = user.getJiraPointHourRatio(); // Yeni dönüşüm oranını al
+    Double pointHourRatio = user.getJiraPointHourRatio();
 
     if (jiraUrl == null || jiraUserEmail == null || apiToken == null || projectKey == null) {
         throw new IllegalStateException("Kullanıcının Jira entegrasyon bilgileri eksik.");
@@ -50,14 +49,12 @@ public String createJiraIssue(Long taskId, String consensusScore, String userEma
     Task task = taskRepository.findById(taskId)
             .orElseThrow(() -> new RuntimeException("Jira'ya gönderilecek görev bulunamadı: " + taskId));
 
-    // URL'yi normalize et (302 hatasını önlemek için)
     String baseUrl = jiraUrl.trim();
     if (baseUrl.endsWith("/")) {
         baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
     }
     String createIssueUrl = baseUrl + "/rest/api/3/issue";
 
-    // 2. Kimlik doğrulama başlığını oluştur
     String auth = jiraUserEmail + ":" + apiToken;
     String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
     HttpHeaders headers = new HttpHeaders();
@@ -65,29 +62,22 @@ public String createJiraIssue(Long taskId, String consensusScore, String userEma
     headers.setContentType(MediaType.APPLICATION_JSON);
     headers.set("Accept", "application/json");
 
-    // 3. Story Points ve Original Estimate değerlerini hesapla
     Double storyPointsValue = null;
     String originalEstimateValue = null;
     try {
-        // "½" gibi değerleri sayıya çevir
         storyPointsValue = Double.parseDouble(consensusScore.replace("½", "0.5"));
         
-        // Eğer kullanıcı bir dönüşüm oranı belirttiyse, originalEstimate'i hesapla
         if (pointHourRatio != null && pointHourRatio > 0) {
             double hours = storyPointsValue * pointHourRatio;
-            // Jira, dakika bazlı (m) veya hafta bazlı (w) da kabul eder.
-            // Şimdilik sadece saat (h) olarak gönderiyoruz.
-            originalEstimateValue = Math.round(hours) + "h"; // Örn: "16h"
+            originalEstimateValue = Math.round(hours) + "h";
         }
     } catch (NumberFormatException e) {
         logger.warn("Sayısal olmayan consensusScore ('{}') için Story Points veya Original Estimate hesaplanamıyor.", consensusScore);
     }
 
-    // 4. Gönderilecek JSON'ın "fields" bölümünü dinamik olarak oluştur
     Map<String, Object> fields = new HashMap<>();
     fields.put("project", Map.of("key", projectKey));
     fields.put("summary", task.getTitle());
-    // Jira'nın yeni metin formatı için description'ı doğru yapılandıralım
     String descriptionText = String.format(
         "%s\n\n---\n*plAIn Oylama Sonucu: %s*",
         task.getDescription() != null ? task.getDescription() : "",
@@ -101,11 +91,10 @@ public String createJiraIssue(Long taskId, String consensusScore, String userEma
             })
         }
     ));
-    fields.put("issuetype", Map.of("name", "Task")); // Veya "Görev" veya projenize uygun olan
+    fields.put("issuetype", Map.of("name", "Task")); 
 
-    // Sadece hesaplanabildiyse alanları ekle
     if (storyPointsValue != null) {
-        String storyPointsFieldId = "customfield_10016"; // KENDİ PROJENİZİN DOĞRU ID'Sİ
+        String storyPointsFieldId = "customfield_10016"; 
         fields.put(storyPointsFieldId, storyPointsValue);
     }
     if (originalEstimateValue != null) {
@@ -114,7 +103,6 @@ public String createJiraIssue(Long taskId, String consensusScore, String userEma
     
     Map<String, Object> issueDetails = Map.of("fields", fields);
 
-    // 5. API isteğini gönder
     HttpEntity<Map<String, Object>> entity = new HttpEntity<>(issueDetails, headers);
     try {
         ResponseEntity<Map> response = restTemplate.postForEntity(createIssueUrl, entity, Map.class);

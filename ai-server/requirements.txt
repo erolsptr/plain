@@ -10,3 +10,7 @@ SQLAlchemy
 pgvector
 psycopg2-binary
 beautifulsoup4
+langchain-groq
+pandas
+openai
+langchain-openai
