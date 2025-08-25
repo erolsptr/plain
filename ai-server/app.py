@@ -16,7 +16,6 @@ load_dotenv(override=True)
 
 app = Flask(__name__)
 
-# --- AI ve Veritabanı Kurulumu ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
@@ -72,6 +71,7 @@ def extract_json_from_string(text):
 
 def retrieve_relevant_code(query_text, project_id):
     if not query_text or not project_id:
+        print("--- DEBUG: Proje ID'si sağlanmadığı için kod araması atlanıyor. ---")
         return ""
 
     db_session = SessionLocal()
@@ -89,12 +89,16 @@ def retrieve_relevant_code(query_text, project_id):
         results = db_session.execute(sql_query, {'pid': project_id, 'embedding': query_embedding}).fetchall()
         
         if not results:
-            return "No relevant code snippets found in the project's indexed files.\n\n"
+            print(f"--- DEBUG: Proje ID {project_id} için veritabanında alakalı kod bulunamadı. ---")
+            return "No relevant code snippets were found for this task.\n\n"
 
         context = "Context from project code:\n"
+        print("--- DEBUG: Veritabanından aşağıdaki ilgili kodlar bulundu: ---")
         for i, (content, file_path) in enumerate(results):
+            print(f"  -> Snippet #{i+1}: {file_path}")
             context += f"--- Relevant Code Snippet #{i+1} from `{file_path}` ---\n"
             context += f"```\n{content}\n```\n\n"
+        print("---------------------------------------------------------")
         return context
 
     except Exception as e:
@@ -103,6 +107,8 @@ def retrieve_relevant_code(query_text, project_id):
     finally:
         db_session.close()
 
+
+
 def get_ai_estimation(task_data):
     task_title = task_data.get('title', 'Başlık Yok')
     task_description = task_data.get('description', 'Açıklama Yok')
@@ -110,50 +116,50 @@ def get_ai_estimation(task_data):
     project_id = task_data.get('projectId')
     task_history = task_data.get('taskHistory', [])
 
-    code_context = retrieve_relevant_code(f"{task_title}\n{task_description}", project_id)
-    
-    # --- YENİ KOŞULLU PROMPT MANTIĞI ---
-    persona = "You are 'plAIn', a Senior Software Architect. Your analysis must be insightful, clear, and technically grounded. You must respond ONLY with a valid JSON object with `vote` and `reasoning` keys. The reasoning MUST be in Turkish.\n\n"
-    
-    analysis_requirements = (
-        "Your `reasoning` text MUST address the following points in a comprehensive paragraph:\n"
-        "- A breakdown of the core technical tasks involved.\n"
-        "- An analysis of the main complexities or risks.\n"
-    )
-    final_justification_instruction = "- A final justification for your chosen `vote`.\n\n"
-    voting_rule = "**VOTING RULE:** To provide a precise estimate, use fractional points (e.g., '1.5') if they are available and the task's complexity warrants it.\n\n"
-    
+    search_query = f"{task_title}\n{task_description}"
+    code_context = retrieve_relevant_code(search_query, project_id)
+    has_code_context = "No relevant code snippets" not in code_context and "Could not retrieve" not in code_context
+
     history_context = ""
-    # Geçmiş varsa, hem karşılaştırma talimatını hem de geçmiş verisini ekle
-    if task_history:
-        analysis_requirements += "- A comparison to a relevant past task.\n"
+    has_history_context = len(task_history) > 0
+
+    persona = "You are 'plAIn', a Senior Software Architect. Your reasoning must be insightful, clear, and technically grounded. Respond ONLY with a valid JSON object with `vote` and `reasoning` keys. The reasoning MUST be in Turkish.\n\n"
+    
+    analysis_requirements = "Your `reasoning` text must include:\n- A breakdown of the core technical tasks.\n- An analysis of complexities and risks.\n"
+    
+    if has_code_context:
+        analysis_requirements += "- A specific analysis based on the provided Code Context.\n"
+    
+    if has_history_context:
+        analysis_requirements += "- A comparison to a relevant past task from the Past Estimations.\n"
         
-        history_context += "Past Estimations:\n"
+    analysis_requirements += "- A final justification for your vote.\n\n"
+    
+    if has_history_context:
+        history_context_text = "Past Estimations:\n"
         for task in task_history:
-            history_context += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
-        history_context += "\n"
+            history_context_text += f"- Title: '{task.get('title')}', Consensus Score: {task.get('consensusScore')}\n"
     else:
-        # Geçmiş yoksa, bu durumu belirt
-        history_context += "Past Estimations:\nNo past estimations provided for this room.\n"
+        history_context_text = "Past Estimations: None provided.\n"
 
     # Tüm parçaları birleştir
     prompt = (
         f"{persona}"
-        f"--- ANALYSIS REQUIREMENTS ---\n{analysis_requirements}{final_justification_instruction}"
-        f"{voting_rule}"
-        f"--- CONTEXT ---\n"
-        f"{code_context}"
-        f"{history_context}"
+        f"--- ANALYSIS REQUIREMENTS ---\n{analysis_requirements}"
+        f"--- CONTEXT ---\n{code_context}\n{history_context_text}\n"
         f"--- NEW TASK ---\n"
         f"Title: {task_title}\n"
         f"Description: {task_description}\n"
         f"Available Points: {', '.join(map(str, card_set))}"
     )
 
-    print("--- AI Beyni: Dinamik olarak oluşturulmuş hibrit prompt gönderiliyor... ---")
+    print("\n" + "="*80)
+    print("AI MODELİNE GÖNDERİLEN TAM PROMPT:")
+    print(prompt)
+    print("="*80 + "\n")
+    
     try:
         response = ai_model.invoke([HumanMessage(content=prompt)])
-        
         print(f"--- Llama 4'ten gelen ham cevap: {response.content} ---")
 
         response_json = extract_json_from_string(response.content)

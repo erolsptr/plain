@@ -119,6 +119,8 @@ function Room({ user: currentUser }) {
   const [activeParticipants, setActiveParticipants] = useState(new Set());
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [timer, setTimer] = useState("00:00");
+  const [changingVoteFor, setChangingVoteFor] = useState(null);
+  const [areVotesRevealed, setAreVotesRevealed] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancellationNotice, setCancellationNotice] = useState({
     show: false,
@@ -229,7 +231,7 @@ function Room({ user: currentUser }) {
             setVotes(roomState.votes || {});
             setAiReasoning(roomState.aiReasoning || null);
             setActiveParticipants(new Set(roomState.activeParticipants || []));
-            setRevealVotes(false);
+            setAreVotesRevealed(roomState.areVotesRevealed);
             setHasVoted(false);
           }
         );
@@ -269,27 +271,28 @@ function Room({ user: currentUser }) {
       if (client) client.deactivate();
     };
   }, [user, roomId, fetchTasks]);
-  useEffect(() => {
-    if (!votingStartTime || revealVotes) {
-      setTimer("00:00");
-      return;
+useEffect(() => {
+    if (!votingStartTime || !activeTask?.id) {
+        setTimer('00:00');
+        return;
     }
 
     const intervalId = setInterval(() => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - votingStartTime) / 1000);
+        const now = Date.now();
+        const elapsed = Math.floor((now - votingStartTime) / 1000); 
 
-      const minutes = Math.floor(elapsed / 60);
-      const seconds = elapsed % 60;
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
 
-      const formattedTime = `${String(minutes).padStart(2, "0")}:${String(
-        seconds
-      ).padStart(2, "0")}`;
-      setTimer(formattedTime);
-    }, 1000);
+        const formattedTime = `${String(minutes).padStart(2, '0')}:${String(
+            seconds
+        ).padStart(2, '0')}`;
+        setTimer(formattedTime);
+    }, 1000); 
 
     return () => clearInterval(intervalId);
-  }, [votingStartTime, revealVotes]);
+    
+}, [votingStartTime, activeTask]);
 
   useEffect(() => {
     if (activeTask && activeTask.id) {
@@ -298,16 +301,19 @@ function Room({ user: currentUser }) {
   }, [activeTask]);
 
   const isModerator = user?.email === roomOwnerEmail;
+  const canChangeVote =
+    areVotesRevealed && votes[user?.name] && !changingVoteFor;
   const allVotesIn =
     activeParticipants.size > 0 &&
     activeParticipants.size === Object.keys(votes).length;
 
   const handleVote = (voteValue) => {
-    if (stompClient && user?.name && votingStartTime) {
-      const voteTime = Date.now();
-      const durationMs = voteTime - votingStartTime;
+    if (stompClient && user?.name) {
+      const durationMs = votingStartTime ? Date.now() - votingStartTime : null;
 
       setHasVoted(true);
+      setChangingVoteFor(null);
+
       stompClient.publish({
         destination: `/app/room/${roomId}/vote`,
         body: JSON.stringify({
@@ -317,6 +323,16 @@ function Room({ user: currentUser }) {
           type: "VOTE",
         }),
       });
+    }
+  };
+
+  const handleChangeVote = () => {
+    if (stompClient && user?.name) {
+      stompClient.publish({
+        destination: `/app/room/${roomId}/retract-vote`,
+        body: JSON.stringify({ sender: user.name }),
+      });
+      setChangingVoteFor(user.name);
     }
   };
 
@@ -353,15 +369,15 @@ function Room({ user: currentUser }) {
     }
   };
 
-const confirmCancelVoting = () => {
+  const confirmCancelVoting = () => {
     if (stompClient && isModerator) {
-        stompClient.publish({
-            destination: `/app/room/${roomId}/cancel-voting`,
-            body: JSON.stringify({ sender: user.name })
-        });
-        setIsCancelModalOpen(false);
+      stompClient.publish({
+        destination: `/app/room/${roomId}/cancel-voting`,
+        body: JSON.stringify({ sender: user.name }),
+      });
+      setIsCancelModalOpen(false);
     }
-};
+  };
 
   const handleNewRound = () => {
     if (stompClient && user?.name && isModerator) {
@@ -644,68 +660,68 @@ const confirmCancelVoting = () => {
             </div>
           )}
 
-          <div className="moderator-controls">
-            {isModerator &&
-              activeTask.title !== "Henüz bir görev belirlenmedi." &&
-              !revealVotes && (
-                <div className="voting-actions">
-                  <button
-                    onClick={handleRevealVotes}
-                    disabled={!allVotesIn}
-                    className="reveal-button side-panel-button"
-                  >
-                    Oyları Göster
-                  </button>
-                  <button
-                    onClick={handleCancelVoting}
-                    className="reveal-button side-panel-button danger"
-                  >
-                    İptal Et
-                  </button>
-                </div>
-              )}
 
-            {revealVotes && isModerator && (
-              <div className="moderator-actions">
-                <button
-                  onClick={handleNewRound}
-                  className="reveal-button side-panel-button"
-                >
-                  Yeni Tur Başlat
-                </button>
-                <button
-                  onClick={handleSaveResult}
-                  className="reveal-button side-panel-button primary"
-                >
-                  Sonucu Kaydet
-                </button>
-                <button
-                  onClick={handleSendToJira}
-                  className="reveal-button side-panel-button jira"
-                  disabled={
+<div className="moderator-controls">
+    {isModerator && activeTask.title !== "Henüz bir görev belirlenmedi." && !areVotesRevealed && (
+        <div className="voting-actions">
+            <button
+                onClick={handleRevealVotes}
+                disabled={!allVotesIn}
+                className="reveal-button side-panel-button"
+            >
+                Oyları Göster
+            </button>
+            <button
+                onClick={handleCancelVoting}
+                className="reveal-button side-panel-button danger"
+            >
+                İptal Et
+            </button>
+        </div>
+    )}
+
+    {areVotesRevealed && isModerator && (
+        <div className="moderator-actions">
+            <button
+                onClick={handleNewRound}
+                className="reveal-button side-panel-button"
+            >
+                Yeni Tur Başlat
+            </button>
+            <button
+                onClick={handleSaveResult}
+                className="reveal-button side-panel-button primary"
+            >
+                Sonucu Kaydet
+            </button>
+            <button
+                onClick={handleSendToJira}
+                className="reveal-button side-panel-button jira"
+                disabled={
                     jiraStatus.state === "sending" ||
                     consensus?.text === "Anlaşma Yok"
-                  }
-                >
-                  Jira'ya Gönder
-                </button>
-              </div>
-            )}
-            {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
-              <div className={`jira-status-message ${jiraStatus.state}`}>
-                {jiraStatus.message}
-              </div>
-            )}
+                }
+            >
+                Jira'ya Gönder
+            </button>
+        </div>
+    )}
+    
+    {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
+        <div className={`jira-status-message ${jiraStatus.state}`}>
+            {jiraStatus.message}
+        </div>
+    )}
 
-            {isModerator && (
-              <button
-                onClick={toggleTaskForm}
-                className="reveal-button new-task-button side-panel-button"
-              >
-                {showTaskForm ? "Formu Kapat" : "Yeni Görev Ekle"}
-              </button>
-            )}
-          </div>
+    {isModerator && (
+        <button
+            onClick={toggleTaskForm}
+            className="reveal-button new-task-button side-panel-button"
+        >
+            {showTaskForm ? "Formu Kapat" : "Yeni Görev Ekle"}
+        </button>
+    )}
+</div>
         </div>
         <div className="main-panel">
           <TaskDisplay task={activeTask} />
@@ -713,7 +729,7 @@ const confirmCancelVoting = () => {
           {showTaskForm && isModerator ? (
             <TaskForm roomId={roomId} onTaskCreated={handleTaskCreated} />
           ) : activeTask.title !== "Henüz bir görev belirlenmedi." ? (
-            revealVotes ? (
+            areVotesRevealed && changingVoteFor !== user?.name ? (
               <div className="results-container">
                 <h2>Oylama Sonuçları</h2>
                 <div className="results-grid">
@@ -724,15 +740,23 @@ const confirmCancelVoting = () => {
                       consensusAverage={consensus.average}
                     />
                   )}
-
                   {Object.entries(votes).map(([name, voteData]) => (
-                    <RevealedCard
-                      key={name}
-                      name={name}
-                      vote={voteData.voteValue}
-                      avatarId={participants[name]?.avatarId}
-                      isAI={name === AI_PARTICIPANT_NAME}
-                    />
+                    <div key={name} className="revealed-card-wrapper">
+                      <RevealedCard
+                        name={name}
+                        vote={voteData.voteValue}
+                        avatarId={participants[name]?.avatarId}
+                        isAI={name === AI_PARTICIPANT_NAME}
+                      />
+                      {user?.name === name && canChangeVote && (
+                        <button
+                          onClick={handleChangeVote}
+                          className="change-vote-btn"
+                        >
+                          Oyunu Değiştir
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
                 {aiReasoning && (
@@ -748,7 +772,7 @@ const confirmCancelVoting = () => {
               <VotingCards
                 cards={activeTask.cardSet.split(",")}
                 onVote={handleVote}
-                hasVoted={hasVoted}
+                hasVoted={hasVoted && !changingVoteFor}
               />
             )
           ) : null}

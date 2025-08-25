@@ -218,6 +218,15 @@ public class PokerController {
         publishFullRoomState(roomId);
     }
 
+    @MessageMapping("/room/{roomId}/retract-vote")
+    public void retractVote(@DestinationVariable String roomId, @Payload Message retractMessage) {
+        String username = retractMessage.getSender();
+        if (username != null && !username.isEmpty()) {
+            roomService.retractVote(roomId, username);
+            publishFullRoomState(roomId);
+        }
+    }
+
     @MessageMapping("/room/{roomId}/reveal")
     public void revealVotes(@DestinationVariable String roomId, Principal principal) {
         String requesterEmail = principal.getName();
@@ -228,7 +237,8 @@ public class PokerController {
                     requesterEmail);
             return;
         }
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/reveal", Map.of("reveal", true));
+        roomService.setVotesRevealed(roomId, true);
+        publishFullRoomState(roomId); 
     }
 
     @MessageMapping("/room/{roomId}/new-round")
@@ -290,7 +300,7 @@ public class PokerController {
         currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
         currentRoomState
                 .setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
-        currentRoomState.setAreVotesRevealed(false);
+        currentRoomState.setAreVotesRevealed(roomService.areVotesRevealed(roomId)); 
         currentRoomState.setAiReasoning(roomService.getAIReasoning(roomId));
 
         currentRoomState.setVotingStartTime(roomService.getVotingStartTime(roomId));
