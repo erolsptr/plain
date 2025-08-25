@@ -29,6 +29,9 @@ public class Task {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String cardSet;
 
+    @Column(name = "consensus_score")
+    private String consensusScore;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "poker_room_id")
     @JsonIgnore

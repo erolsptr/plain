@@ -254,6 +254,7 @@ public class PokerController {
         roomService.startNewRound(roomId);
         publishFullRoomState(roomId);
     }
+    
 
     @MessageMapping("/room/{roomId}/kick")
     public void kickUser(@DestinationVariable String roomId, @Payload Message kickMessage, Principal principal) {
@@ -291,6 +292,22 @@ public class PokerController {
         roomService.cancelVoting(roomId);
         publishFullRoomState(roomId);
     }
+
+    @MessageMapping("/room/{roomId}/skip-voting")
+public void skipVoting(@DestinationVariable String roomId, Principal principal) {
+    String requesterEmail = principal.getName();
+    String ownerEmail = roomService.getRoomOwnerEmail(roomId);
+
+    if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
+        logger.warn("Yetkisiz oylamayı atlama denemesi. Oda Sahibi: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
+        return;
+    }
+    
+    roomService.skipVoting(roomId, ownerEmail);
+    
+    publishFullRoomState(roomId);
+    messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+}
 
     public void publishFullRoomState(String roomId) {
         RoomState currentRoomState = new RoomState();

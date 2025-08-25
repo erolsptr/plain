@@ -1147,3 +1147,31 @@ button.jira:disabled {
     color: var(--text-color-dark);
     border-color: var(--primary-color);
 }
+.side-panel-button.secondary {
+    background-color: transparent; /* Arka plan şeffaf */
+    
+    /* Çerçeve ve Metin Rengi: Sarı/Turuncu */
+    border: 1px solid #F59E0B; 
+    color: #F59E0B;
+}
+
+/* Hover Hali (Üzerine Gelindiğinde) */
+.side-panel-button.secondary:hover {
+    /* Arka Plan: Daha açık, canlı bir sarı */
+    background-color: #FBBF24; 
+    border-color: #FBBF24;
+    
+    /* Metin Rengi: Koyu, okunaklı bir renk */
+    color: var(--text-color-dark); 
+}
+
+/* AÇIK TEMA için küçük bir ayar */
+body.light-theme .side-panel-button.secondary {
+    /* Metin rengini daha koyu bir sarı yapalım ki okunabilir olsun */
+    color: #D97706; 
+    border-color: #D97706;
+}
+
+body.light-theme .side-panel-button.secondary:hover {
+    color: white; /* Hover'da metin rengi her zaman beyaz olsun */
+}

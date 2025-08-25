@@ -120,6 +120,7 @@ function Room({ user: currentUser }) {
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [timer, setTimer] = useState("00:00");
   const [changingVoteFor, setChangingVoteFor] = useState(null);
+  const [isSkipModalOpen, setIsSkipModalOpen] = useState(false);
   const [areVotesRevealed, setAreVotesRevealed] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancellationNotice, setCancellationNotice] = useState({
@@ -271,28 +272,27 @@ function Room({ user: currentUser }) {
       if (client) client.deactivate();
     };
   }, [user, roomId, fetchTasks]);
-useEffect(() => {
+  useEffect(() => {
     if (!votingStartTime || !activeTask?.id) {
-        setTimer('00:00');
-        return;
+      setTimer("00:00");
+      return;
     }
 
     const intervalId = setInterval(() => {
-        const now = Date.now();
-        const elapsed = Math.floor((now - votingStartTime) / 1000); 
+      const now = Date.now();
+      const elapsed = Math.floor((now - votingStartTime) / 1000);
 
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
 
-        const formattedTime = `${String(minutes).padStart(2, '0')}:${String(
-            seconds
-        ).padStart(2, '0')}`;
-        setTimer(formattedTime);
-    }, 1000); 
+      const formattedTime = `${String(minutes).padStart(2, "0")}:${String(
+        seconds
+      ).padStart(2, "0")}`;
+      setTimer(formattedTime);
+    }, 1000);
 
     return () => clearInterval(intervalId);
-    
-}, [votingStartTime, activeTask]);
+  }, [votingStartTime, activeTask]);
 
   useEffect(() => {
     if (activeTask && activeTask.id) {
@@ -485,6 +485,21 @@ useEffect(() => {
     });
   };
 
+  const openSkipVotingModal = () => {
+    if (isModerator) {
+      setIsSkipModalOpen(true);
+    }
+  };
+
+  const confirmSkipVoting = () => {
+    if (stompClient && isModerator) {
+      stompClient.publish({
+        destination: `/app/room/${roomId}/skip-voting`,
+        body: JSON.stringify({ sender: user.name }),
+      });
+    }
+    setIsSkipModalOpen(false);
+  };
   const openDeleteTaskModal = (task) => {
     setTaskToDelete(task);
     setIsDeleteTaskModalOpen(true);
@@ -660,68 +675,80 @@ useEffect(() => {
             </div>
           )}
 
+          <div className="moderator-controls">
+            {isModerator &&
+              activeTask.title !== "Henüz bir görev belirlenmedi." &&
+              !areVotesRevealed && (
+                <div className="voting-actions">
+                  <button
+                    onClick={handleRevealVotes}
+                    disabled={!allVotesIn}
+                    className="reveal-button side-panel-button"
+                  >
+                    Oyları Göster
+                  </button>
+                  <button
+                    onClick={openSkipVotingModal}
+                    className="reveal-button side-panel-button secondary"
+                  >
+                    Atla
+                  </button>
+                  <button
+                    onClick={handleCancelVoting}
+                    className="reveal-button side-panel-button danger"
+                  >
+                    İptal Et
+                  </button>
+                </div>
+              )}
 
-<div className="moderator-controls">
-    {isModerator && activeTask.title !== "Henüz bir görev belirlenmedi." && !areVotesRevealed && (
-        <div className="voting-actions">
-            <button
-                onClick={handleRevealVotes}
-                disabled={!allVotesIn}
-                className="reveal-button side-panel-button"
-            >
-                Oyları Göster
-            </button>
-            <button
-                onClick={handleCancelVoting}
-                className="reveal-button side-panel-button danger"
-            >
-                İptal Et
-            </button>
-        </div>
-    )}
-
-    {areVotesRevealed && isModerator && (
-        <div className="moderator-actions">
-            <button
-                onClick={handleNewRound}
-                className="reveal-button side-panel-button"
-            >
-                Yeni Tur Başlat
-            </button>
-            <button
-                onClick={handleSaveResult}
-                className="reveal-button side-panel-button primary"
-            >
-                Sonucu Kaydet
-            </button>
-            <button
-                onClick={handleSendToJira}
-                className="reveal-button side-panel-button jira"
-                disabled={
+            {areVotesRevealed && isModerator && (
+              <div className="moderator-actions">
+                <button
+                  onClick={handleNewRound}
+                  className="reveal-button side-panel-button"
+                >
+                  Yeni Tur Başlat
+                </button>
+                <button
+                  onClick={handleSaveResult}
+                  className="reveal-button side-panel-button primary"
+                >
+                  Sonucu Kaydet
+                </button>
+                <button
+                  onClick={openSkipVotingModal}
+                  className="reveal-button side-panel-button secondary"
+                >
+                  Atla
+                </button>
+                <button
+                  onClick={handleSendToJira}
+                  className="reveal-button side-panel-button jira"
+                  disabled={
                     jiraStatus.state === "sending" ||
                     consensus?.text === "Anlaşma Yok"
-                }
-            >
-                Jira'ya Gönder
-            </button>
-        </div>
-    )}
-    
-    {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
-        <div className={`jira-status-message ${jiraStatus.state}`}>
-            {jiraStatus.message}
-        </div>
-    )}
+                  }
+                >
+                  Jira'ya Gönder
+                </button>
+              </div>
+            )}
 
-    {isModerator && (
-        <button
-            onClick={toggleTaskForm}
-            className="reveal-button new-task-button side-panel-button"
-        >
-            {showTaskForm ? "Formu Kapat" : "Yeni Görev Ekle"}
-        </button>
-    )}
-</div>
+            {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
+              <div className={`jira-status-message ${jiraStatus.state}`}>
+                {jiraStatus.message}
+              </div>
+            )}
+            {isModerator && (
+              <button
+                onClick={toggleTaskForm}
+                className="reveal-button new-task-button side-panel-button"
+              >
+                {showTaskForm ? "Formu Kapat" : "Yeni Görev Ekle"}
+              </button>
+            )}
+          </div>
         </div>
         <div className="main-panel">
           <TaskDisplay task={activeTask} />
@@ -959,7 +986,12 @@ useEffect(() => {
               </div>
             ) : (
               <div className="placeholder-text modal-placeholder">
-                Bu görev henüz oylanmamıştır.
+                {
+                  selectedTask.consensusScore &&
+                  selectedTask.consensusScore.includes("Atlandı")
+                    ? "Bu görev oylanmadan atlanmıştır."
+                    : "Bu görev henüz oylanmamıştır."
+                }
               </div>
             )}
           </div>
@@ -1046,6 +1078,30 @@ useEffect(() => {
               className="modal-button danger"
             >
               Evet, İptal Et
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={isSkipModalOpen}
+        onClose={() => setIsSkipModalOpen(false)}
+        centerContent
+      >
+        <div className="confirm-delete-modal">
+          <h3>Oylamayı Atla</h3>
+          <p>
+            Bu görevi oylamadan atlamak ve "Atlandı (Oylanmadı)" olarak
+            tamamlanmış saymak istediğinizden emin misiniz?
+          </p>
+          <div className="modal-actions">
+            <button
+              onClick={() => setIsSkipModalOpen(false)}
+              className="modal-button secondary"
+            >
+              Vazgeç
+            </button>
+            <button onClick={confirmSkipVoting} className="modal-button danger">
+              Evet, Atla
             </button>
           </div>
         </div>
