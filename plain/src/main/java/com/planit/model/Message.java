@@ -9,6 +9,8 @@ public class Message {
     private MessageType type;
     private String cardSet; 
     private Long durationMs;
+    private Boolean autoAdvance;
+
 
     public enum MessageType {
         JOIN,

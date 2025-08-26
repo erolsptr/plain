@@ -127,6 +127,10 @@ function Room({ user: currentUser }) {
     show: false,
     message: "",
   });
+  const [advanceNotice, setAdvanceNotice] = useState({
+    show: false,
+    message: "",
+  });
   const [userProjects, setUserProjects] = useState([]);
   const [taskProjectSelections, setTaskProjectSelections] = useState({});
   const [jiraStatus, setJiraStatus] = useState({ state: "idle", message: "" });
@@ -134,6 +138,7 @@ function Room({ user: currentUser }) {
   const [aiLoadingStatus, setAiLoadingStatus] = useState("");
   const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [autoAdvance, setAutoAdvance] = useState(true);
 
   const fetchTasks = useCallback(async () => {
     const token = sessionStorage.getItem("token");
@@ -241,7 +246,26 @@ function Room({ user: currentUser }) {
         );
         historySub = client.subscribe(
           `/topic/room/${roomId}/history-updated`,
-          () => {
+          (message) => {
+            try {
+              const payload = JSON.parse(message.body);
+
+              if (payload.type === "VOTE_CANCELLED") {
+                setCancellationNotice({ show: true, message: payload.message });
+                setTimeout(
+                  () => setCancellationNotice({ show: false, message: "" }),
+                  5000
+                );
+              } else if (payload.type === "ADVANCE_NOTICE") {
+                setAdvanceNotice({ show: true, message: payload.message });
+                setTimeout(
+                  () => setAdvanceNotice({ show: false, message: "" }),
+                  3000
+                );
+              }
+            } catch (e) {
+            }
+
             fetchTasks();
           }
         );
@@ -297,6 +321,7 @@ function Room({ user: currentUser }) {
   useEffect(() => {
     if (activeTask && activeTask.id) {
       setIsAiLoading(false);
+      setAdvanceNotice({ show: false, message: "" });
     }
   }, [activeTask]);
 
@@ -390,13 +415,15 @@ function Room({ user: currentUser }) {
 
   const handleSaveResult = async () => {
     if (!isModerator) return;
+
     const token = sessionStorage.getItem("token");
     if (!token) {
       alert("Yetkilendirme anahtarı bulunamadı.");
       return;
     }
     try {
-      const response = await fetch(`/api/rooms/${roomId}/save-result`, {
+      const url = `/api/rooms/${roomId}/save-result?autoAdvance=${autoAdvance}`;
+      const response = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -495,7 +522,7 @@ function Room({ user: currentUser }) {
     if (stompClient && isModerator) {
       stompClient.publish({
         destination: `/app/room/${roomId}/skip-voting`,
-        body: JSON.stringify({ sender: user.name }),
+        body: JSON.stringify({ sender: user.name, autoAdvance: autoAdvance }),
       });
     }
     setIsSkipModalOpen(false);
@@ -558,6 +585,9 @@ function Room({ user: currentUser }) {
 
   return (
     <>
+      {advanceNotice.show && (
+        <div className="advance-notice">{advanceNotice.message}</div>
+      )}
       {cancellationNotice.show && (
         <div className="cancellation-notice">{cancellationNotice.message}</div>
       )}
@@ -739,6 +769,20 @@ function Room({ user: currentUser }) {
               <div className={`jira-status-message ${jiraStatus.state}`}>
                 {jiraStatus.message}
               </div>
+            )}
+            {isModerator && (
+              <label className="auto-advance-toggle" htmlFor="auto-advance">
+                <span>Otomatik Sonraki Görev</span>
+                <div className="toggle-switch-container">
+                  <input
+                    type="checkbox"
+                    id="auto-advance"
+                    checked={autoAdvance}
+                    onChange={(e) => setAutoAdvance(e.target.checked)}
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
+              </label>
             )}
             {isModerator && (
               <button
@@ -986,12 +1030,10 @@ function Room({ user: currentUser }) {
               </div>
             ) : (
               <div className="placeholder-text modal-placeholder">
-                {
-                  selectedTask.consensusScore &&
-                  selectedTask.consensusScore.includes("Atlandı")
-                    ? "Bu görev oylanmadan atlanmıştır."
-                    : "Bu görev henüz oylanmamıştır."
-                }
+                {selectedTask.consensusScore &&
+                selectedTask.consensusScore.includes("Atlandı")
+                  ? "Bu görev oylanmadan atlanmıştır."
+                  : "Bu görev henüz oylanmamıştır."}
               </div>
             )}
           </div>

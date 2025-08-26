@@ -8,7 +8,7 @@ import com.planit.model.dto.AIVoteRequest;
 import com.planit.model.dto.TaskCreationRequest;
 import com.planit.repository.UserRepository;
 import com.planit.service.RoomService;
-import com.planit.service.JiraService; // YENİ: JiraService'i import et
+import com.planit.service.JiraService; 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,45 +107,51 @@ public class PokerController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- PokerController.java İÇİNE BU YENİ ENDPOINT'İ EKLE ---
 
-    // --- PokerController.java İÇİNDEKİ BU METODU DEĞİŞTİR ---
 
     @DeleteMapping("/api/tasks/{taskId}")
     public ResponseEntity<Void> deleteTask(@PathVariable Long taskId, Authentication authentication) {
         String userEmail = authentication.getName();
         try {
-            // Önce görevin hangi odaya ait olduğunu bulmamız gerekiyor.
-            Task taskToDelete = roomService.findTaskById(taskId); // Bu metodu birazdan ekleyeceğiz
+            Task taskToDelete = roomService.findTaskById(taskId);
             if (taskToDelete == null) {
                 return ResponseEntity.notFound().build();
             }
             String roomId = taskToDelete.getPokerRoom().getId();
 
-            // Silme işlemini yap
             roomService.deleteTask(taskId, userEmail);
 
-            // YENİ: Odaya "geçmiş güncellendi" mesajı yayınla
             messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
 
             return ResponseEntity.noContent().build();
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Oylanmış görev silinemez
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
-    @PostMapping("/api/rooms/{roomId}/save-result")
-    public ResponseEntity<Void> saveVotingResult(@PathVariable String roomId, Authentication authentication) {
-        String userEmail = authentication.getName();
-        roomService.saveCurrentVotingResult(roomId, userEmail);
+@PostMapping("/api/rooms/{roomId}/save-result")
+public ResponseEntity<Void> saveVotingResult(
+        @PathVariable String roomId,
+        @RequestParam(defaultValue = "false") boolean autoAdvance,
+        Authentication authentication) {
+    
+    String userEmail = authentication.getName();
+    roomService.saveCurrentVotingResult(roomId, userEmail);
+    
+    messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+
+    if (autoAdvance) {
+        startNextTaskIfAvailable(roomId, userEmail);
+    } else {
         publishFullRoomState(roomId);
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
-        return ResponseEntity.ok().build();
     }
+    
+    return ResponseEntity.ok().build();
+}
 
     @GetMapping("/api/rooms/{roomId}/tasks")
     public ResponseEntity<List<Map<String, Object>>> getTaskHistory(@PathVariable String roomId,
@@ -293,20 +299,25 @@ public class PokerController {
         publishFullRoomState(roomId);
     }
 
-    @MessageMapping("/room/{roomId}/skip-voting")
-public void skipVoting(@DestinationVariable String roomId, Principal principal) {
+@MessageMapping("/room/{roomId}/skip-voting")
+public void skipVoting(@DestinationVariable String roomId, @Payload Message skipMessage, Principal principal) {
     String requesterEmail = principal.getName();
     String ownerEmail = roomService.getRoomOwnerEmail(roomId);
 
     if (ownerEmail == null || !ownerEmail.equals(requesterEmail)) {
-        logger.warn("Yetkisiz oylamayı atlama denemesi. Oda Sahibi: {}, İstek Yapan: {}", ownerEmail, requesterEmail);
         return;
     }
     
-    roomService.skipVoting(roomId, ownerEmail);
-    
-    publishFullRoomState(roomId);
+    roomService.skipVoting(roomId, requesterEmail);
     messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+
+    boolean autoAdvance = skipMessage.getAutoAdvance() != null && skipMessage.getAutoAdvance();
+    
+    if (autoAdvance) {
+        startNextTaskIfAvailable(roomId, requesterEmail);
+    } else {
+        publishFullRoomState(roomId);
+    }
 }
 
     public void publishFullRoomState(String roomId) {
@@ -324,4 +335,26 @@ public void skipVoting(@DestinationVariable String roomId, Principal principal) 
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
     }
+private void startNextTaskIfAvailable(String roomId, String userEmail) {
+    List<Task> pendingTasks = roomService.getPendingTasksForRoom(roomId, userEmail);
+    
+    if (!pendingTasks.isEmpty()) {
+        Task nextTask = pendingTasks.get(0);
+
+        messagingTemplate.convertAndSend(
+            "/topic/room/" + roomId + "/history-updated",
+            Map.of(
+                "type", "ADVANCE_NOTICE",
+                "message", "Sonraki göreve geçiliyor..."
+            )
+        );
+        
+        logger.info("Otomatik olarak sonraki göreve geçiliyor: Oda {}, Görev ID {}", roomId, nextTask.getId());
+        roomService.setActiveTask(roomId, nextTask, userEmail);
+    } else {
+        logger.info("Otomatik geçilecek başka görev bulunamadı: Oda {}", roomId);
+        publishFullRoomState(roomId);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+    }
+}
 }
