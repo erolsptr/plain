@@ -1,6 +1,9 @@
 package com.planit.controller;
 
 import com.planit.model.Project;
+import com.planit.model.dto.JiraBulkRequest;
+import com.planit.model.dto.JiraBulkResponse;
+import com.planit.service.JiraService;
 import com.planit.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +20,9 @@ public class ProjectController {
 
     @Autowired
     private ProjectService projectService;
+    
+    @Autowired
+    private JiraService jiraService;
 
     @GetMapping
     public ResponseEntity<List<Project>> getUserProjects(Authentication authentication) {
@@ -34,7 +40,6 @@ public class ProjectController {
             Project createdProject = projectService.createProject(projectName, githubUrl, userEmail);
             return new ResponseEntity<>(createdProject, HttpStatus.CREATED);
         } catch (IllegalStateException e) {
-            // Örneğin, "Bu proje zaten eklenmiş" hatası için
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
         }
     }
@@ -46,12 +51,20 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
     
-    // YENİ ENDPOINT: İndeksleme işlemini başlatan endpoint
     @PostMapping("/{projectId}/index")
     public ResponseEntity<Project> startIndexing(@PathVariable Long projectId, Authentication authentication) {
         String userEmail = authentication.getName();
         Project updatedProject = projectService.startIndexing(projectId, userEmail);
-        // Servis anında "INDEXING" durumundaki projeyi döndürecek
         return ResponseEntity.accepted().body(updatedProject);
+    }
+
+    @PostMapping("/send-bulk-to-jira")
+    public ResponseEntity<JiraBulkResponse> sendBulkToJira(
+            @RequestBody JiraBulkRequest bulkRequest,
+            Authentication authentication) {
+        
+        String userEmail = authentication.getName();
+        JiraBulkResponse response = jiraService.createBulkIssues(bulkRequest, userEmail);
+        return ResponseEntity.ok(response);
     }
 }

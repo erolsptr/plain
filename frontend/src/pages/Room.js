@@ -138,7 +138,9 @@ function Room({ user: currentUser }) {
   const [aiLoadingStatus, setAiLoadingStatus] = useState("");
   const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [selectedTasksForJira, setSelectedTasksForJira] = useState(new Set());
   const [autoAdvance, setAutoAdvance] = useState(true);
+  const [finalConsensusScore, setFinalConsensusScore] = useState("");
 
   const fetchTasks = useCallback(async () => {
     const token = sessionStorage.getItem("token");
@@ -263,8 +265,7 @@ function Room({ user: currentUser }) {
                   3000
                 );
               }
-            } catch (e) {
-            }
+            } catch (e) {}
 
             fetchTasks();
           }
@@ -415,29 +416,106 @@ function Room({ user: currentUser }) {
 
   const handleSaveResult = async () => {
     if (!isModerator) return;
+    if (consensus?.text === "Anlaşma Yok" && !finalConsensusScore) {
+      setAdvanceNotice({ show: true, message: "Lütfen nihai bir puan seçin." });
+      setTimeout(() => setAdvanceNotice({ show: false, message: "" }), 3000);
+      return;
+    }
+
+    if (autoAdvance) {
+      setAdvanceNotice({ show: true, message: "Sonraki göreve geçiliyor..." });
+    }
 
     const token = sessionStorage.getItem("token");
     if (!token) {
       alert("Yetkilendirme anahtarı bulunamadı.");
+      if (autoAdvance) setAdvanceNotice({ show: false, message: "" });
       return;
     }
+
     try {
       const url = `/api/rooms/${roomId}/save-result?autoAdvance=${autoAdvance}`;
+
+      const requestBody = {
+        finalConsensusScore:
+          consensus?.text === "Anlaşma Yok" && finalConsensusScore
+            ? finalConsensusScore
+            : null,
+      };
+
       const response = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
       });
+
       if (!response.ok) {
+        if (autoAdvance) setAdvanceNotice({ show: false, message: "" });
         if (response.status === 403) {
           throw new Error("Sadece oda sahibi sonuçları kaydedebilir.");
         }
         throw new Error("Sonuçlar sunucuya kaydedilemedi.");
       }
+
+      setFinalConsensusScore("");
     } catch (error) {
       console.error("Sonuç kaydetme hatası:", error);
       alert(error.message);
+      if (autoAdvance) setAdvanceNotice({ show: false, message: "" });
     }
   };
+
+  const handleSendSelectedToJira = async () => {
+    if (selectedTasksForJira.size === 0) {
+      alert("Lütfen Jira'ya göndermek için en az bir görev seçin.");
+      return;
+    }
+
+    setJiraStatus({
+      state: "sending",
+      message: `${selectedTasksForJira.size} görev Jira'ya gönderiliyor...`,
+    });
+    const token = sessionStorage.getItem("token");
+
+    try {
+      const tasksToSend = completedTasks
+        .filter((task) => selectedTasksForJira.has(task.taskId))
+        .map((task) => ({
+          taskId: task.taskId,
+          consensusScore: task.consensusScore,
+        }));
+
+      const response = await fetch("/api/projects/send-bulk-to-jira", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tasks: tasksToSend }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Görevler Jira'ya gönderilemedi.");
+      }
+
+      let successMessage = `${data.successCount} görev başarıyla gönderildi.`;
+      if (data.failureCount > 0) {
+        successMessage += ` ${data.failureCount} görevde hata oluştu.`;
+      }
+      setJiraStatus({ state: "success", message: successMessage });
+
+      setSelectedTasksForJira(new Set());
+    } catch (error) {
+      console.error("Toplu Jira gönderim hatası:", error);
+      setJiraStatus({ state: "error", message: error.message });
+    }
+  };
+
   const handleSendToJira = async () => {
     if (!isModerator || !activeTask?.id || !consensus?.text) return;
 
@@ -575,6 +653,33 @@ function Room({ user: currentUser }) {
     setTimeout(() => {
       setShowCopyTooltip(false);
     }, 2000);
+  };
+  const handleSelectAllTasks = (e) => {
+    const isChecked = e.target.checked;
+    if (isChecked) {
+      const allSelectableTaskIds = completedTasks
+        .filter(
+          (task) =>
+            task.consensusScore &&
+            !isNaN(parseFloat(task.consensusScore.replace("½", "0.5")))
+        )
+        .map((task) => task.taskId);
+      setSelectedTasksForJira(new Set(allSelectableTaskIds));
+    } else {
+      setSelectedTasksForJira(new Set());
+    }
+  };
+
+  const handleTaskSelection = (taskId) => {
+    setSelectedTasksForJira((prevSelected) => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(taskId)) {
+        newSelected.delete(taskId);
+      } else {
+        newSelected.add(taskId);
+      }
+      return newSelected;
+    });
   };
 
   if (!user) return <JoinPrompt onNameSubmit={(name) => setUser({ name })} />;
@@ -734,6 +839,29 @@ function Room({ user: currentUser }) {
 
             {areVotesRevealed && isModerator && (
               <div className="moderator-actions">
+                {areVotesRevealed && consensus?.text === "Anlaşma Yok" && (
+                  <div className="tie-breaker-controls">
+                    <select
+                      value={finalConsensusScore}
+                      onChange={(e) => setFinalConsensusScore(e.target.value)}
+                      className="final-score-select"
+                    >
+                      <option value="" disabled>
+                        Anlaşmazlığı Çöz: Puan Seç
+                      </option>
+                      {activeTask.cardSet.split(",").map(
+                        (card) =>
+                          card !== "?" &&
+                          card !== "☕" && (
+                            <option key={card} value={card}>
+                              {card}
+                            </option>
+                          )
+                      )}
+                    </select>
+                  </div>
+                )}
+
                 <button
                   onClick={handleNewRound}
                   className="reveal-button side-panel-button"
@@ -765,11 +893,6 @@ function Room({ user: currentUser }) {
               </div>
             )}
 
-            {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
-              <div className={`jira-status-message ${jiraStatus.state}`}>
-                {jiraStatus.message}
-              </div>
-            )}
             {isModerator && (
               <label className="auto-advance-toggle" htmlFor="auto-advance">
                 <span>Otomatik Sonraki Görev</span>
@@ -936,33 +1059,120 @@ function Room({ user: currentUser }) {
                   <p className="placeholder-text">Oylanacak hazır görev yok.</p>
                 ))}
 
-              {activeTab === "completed" &&
-                (completedTasks.length > 0 ? (
-                  completedTasks.map((task) => (
-                    <div
-                      key={task.taskId}
-                      className="task-history-card"
-                      onClick={() => handleHistoryCardClick(task)}
-                    >
-                      <div className="task-history-card-header">
-                        <span className="task-history-card-title">
-                          {task.title}
-                        </span>
-                        <span className="task-history-card-score">
-                          {task.consensusScore}
-                        </span>
-                      </div>
-                      <div className="task-history-card-footer">
-                        <span>{Object.keys(task.votes).length} Katılımcı</span>
-                      </div>
+              {activeTab === "completed" && (
+                <>
+                  <div className="task-list-bulk-actions">
+                    <div className="select-all-container">
+                      <label
+                        htmlFor="select-all-tasks"
+                        className="custom-checkbox-label"
+                      >
+                        <input
+                          type="checkbox"
+                          id="select-all-tasks"
+                          checked={
+                            completedTasks.filter(
+                              (t) =>
+                                t.consensusScore &&
+                                !isNaN(
+                                  parseFloat(
+                                    t.consensusScore.replace("½", "0.5")
+                                  )
+                                )
+                            ).length > 0 &&
+                            completedTasks
+                              .filter(
+                                (t) =>
+                                  t.consensusScore &&
+                                  !isNaN(
+                                    parseFloat(
+                                      t.consensusScore.replace("½", "0.5")
+                                    )
+                                  )
+                              )
+                              .every((t) => selectedTasksForJira.has(t.taskId))
+                          }
+                          onChange={handleSelectAllTasks}
+                        />
+                        <span className="custom-checkbox-box"></span>
+                        Tümünü Seç
+                      </label>
                     </div>
-                  ))
-                ) : (
-                  <p className="placeholder-text">
-                    Bu odada henüz tamamlanmış bir oylama yok.
-                  </p>
-                ))}
+                    <button
+                      className="send-to-jira-btn"
+                      disabled={
+                        selectedTasksForJira.size === 0 ||
+                        jiraStatus.state === "sending"
+                      }
+                      onClick={handleSendSelectedToJira}
+                    >
+                      {jiraStatus.state === "sending"
+                        ? "Gönderiliyor..."
+                        : `Seçilenleri Gönder (${selectedTasksForJira.size})`}
+                    </button>
+                  </div>
+
+                  {completedTasks.length > 0 ? (
+                    completedTasks.map((task) => {
+                      const isSelectable =
+                        task.consensusScore &&
+                        !isNaN(
+                          parseFloat(task.consensusScore.replace("½", "0.5"))
+                        );
+                      return (
+                        <div
+                          key={task.taskId}
+                          className="task-history-card with-checkbox"
+                        >
+                          <div className="custom-checkbox-wrapper">
+                            <input
+                              type="checkbox"
+                              className="task-select-checkbox"
+                              id={`task-check-${task.taskId}`}
+                              checked={selectedTasksForJira.has(task.taskId)}
+                              disabled={!isSelectable}
+                              onChange={() => handleTaskSelection(task.taskId)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <label
+                              htmlFor={`task-check-${task.taskId}`}
+                            ></label>
+                          </div>
+
+                          <div
+                            className="task-history-card-content"
+                            onClick={() => handleHistoryCardClick(task)}
+                          >
+                            <div className="task-history-card-header">
+                              <span className="task-history-card-title">
+                                {task.title}
+                              </span>
+                              <span className="task-history-card-score">
+                                {task.consensusScore}
+                              </span>
+                            </div>
+                            <div className="task-history-card-footer">
+                              <span>
+                                {Object.keys(task.votes).length} Katılımcı
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="placeholder-text">
+                      Bu odada henüz tamamlanmış bir oylama yok.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
+            {jiraStatus.state !== "idle" && jiraStatus.state !== "sending" && (
+              <div className={`jira-status-message ${jiraStatus.state}`}>
+                {jiraStatus.message}
+              </div>
+            )}
           </div>
         </div>
       </div>

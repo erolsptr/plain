@@ -17,12 +17,8 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Token'ları imzalamak için kullanılacak gizli anahtar.
-    // Bu anahtarın çok daha karmaşık ve güvenli olması gerekir.
-    // Gerçek bir uygulamada bu, application.properties'den okunmalıdır.
     private static final String JWT_SECRET = "4D6251655468576D5A7134743777217A25432A462D4A614E645267556B587032";
 
-    // Token geçerlilik süresi
     private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
      public String generateToken(String username) {

@@ -193,7 +193,7 @@ public class RoomService {
     }
 
     public void recordAIVote(String roomId, String voterName, String voteValue, String reasoning) {
-        recordVote(roomId, voterName, voteValue, null); // AI için süre null olabilir
+        recordVote(roomId, voterName, voteValue, null);
         if (reasoning != null && !reasoning.isEmpty()) {
             aiReasonings.put(roomId, reasoning);
         }
@@ -250,11 +250,12 @@ public class RoomService {
         }
         List<Task> tasks = room.getTasks().stream()
                 .filter(task -> {
-            boolean hasVotes = (task.getVotes() != null && !task.getVotes().isEmpty()) || aiVoteRepository.findByTaskId(task.getId()).isPresent();
-            boolean hasConsensusScore = task.getConsensusScore() != null && !task.getConsensusScore().isEmpty();
-            
-            return hasVotes || hasConsensusScore; 
-        })
+                    boolean hasVotes = (task.getVotes() != null && !task.getVotes().isEmpty())
+                            || aiVoteRepository.findByTaskId(task.getId()).isPresent();
+                    boolean hasConsensusScore = task.getConsensusScore() != null && !task.getConsensusScore().isEmpty();
+
+                    return hasVotes || hasConsensusScore;
+                })
                 .collect(Collectors.toList());
         return tasks.stream().map(task -> {
             Map<String, String> humanVotes = task.getVotes().stream()
@@ -282,13 +283,12 @@ public class RoomService {
     }
 
     @Transactional
-    public void saveCurrentVotingResult(String roomId, String requesterEmail) {
+    public Long saveCurrentVotingResult(String roomId, String requesterEmail, String finalConsensusScore,
+            boolean autoAdvance) {
         User requester = userRepository.findByEmail(requesterEmail)
                 .orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
-
         PokerRoom room = pokerRoomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Sonuçların kaydedileceği oda bulunamadı: " + roomId));
-
         if (room.getOwner() == null || !room.getOwner().getEmail().equals(requesterEmail)) {
             throw new AccessDeniedException("Sadece oda sahibi sonuçları kaydedebilir.");
         }
@@ -296,39 +296,67 @@ public class RoomService {
         Task currentTask = getActiveTask(roomId);
         Map<String, VoteData> currentVotes = getVotes(roomId);
 
-        if (currentTask == null || currentTask.getId() == null || currentVotes == null || currentVotes.isEmpty()) {
-            activeTasks.remove(roomId);
-            clearAllVotes(roomId);
-            return;
+        if (currentTask == null || currentTask.getId() == null) {
+            return null;
         }
 
-        List<Vote> humanVotesToSave = new ArrayList<>();
-        for (Map.Entry<String, VoteData> entry : currentVotes.entrySet()) {
-            String userName = entry.getKey();
-            VoteData voteData = entry.getValue();
-            String voteValue = voteData.getVoteValue();
+        if (currentVotes != null && !currentVotes.isEmpty()) {
+            List<Vote> humanVotesToSave = new ArrayList<>();
+            for (Map.Entry<String, VoteData> entry : currentVotes.entrySet()) {
+                String userName = entry.getKey();
+                VoteData voteData = entry.getValue();
+                String voteValue = voteData.getVoteValue();
 
-            if (userName.equals(AI_PARTICIPANT_NAME)) {
-                AIVote aiVote = new AIVote();
-                aiVote.setVoteValue(voteValue);
-                aiVote.setReasoning(getAIReasoning(roomId));
-                aiVote.setTask(currentTask);
-                aiVoteRepository.save(aiVote);
-            } else {
-                User voter = userRepository.findByName(userName).orElseThrow(
-                        () -> new RuntimeException("DB'de '" + userName + "' adında kullanıcı bulunamadı."));
-                Vote vote = new Vote();
-                vote.setUser(voter);
-                vote.setVoteValue(voteValue);
-                vote.setTask(currentTask);
-                humanVotesToSave.add(vote);
+                if (userName.equals(AI_PARTICIPANT_NAME)) {
+                    AIVote aiVote = new AIVote();
+                    aiVote.setVoteValue(voteValue);
+                    aiVote.setReasoning(getAIReasoning(roomId));
+                    aiVote.setTask(currentTask);
+                    aiVoteRepository.save(aiVote);
+                } else {
+                    User voter = userRepository.findByName(userName).orElseThrow(
+                            () -> new RuntimeException("DB'de '" + userName + "' adında kullanıcı bulunamadı."));
+                    Vote vote = new Vote();
+                    vote.setUser(voter);
+                    vote.setVoteValue(voteValue);
+                    vote.setTask(currentTask);
+                    humanVotesToSave.add(vote);
+                }
+            }
+            if (!humanVotesToSave.isEmpty()) {
+                voteRepository.saveAll(humanVotesToSave);
             }
         }
-        if (!humanVotesToSave.isEmpty()) {
-            voteRepository.saveAll(humanVotesToSave);
+
+        Task taskToUpdate = taskRepository.findById(currentTask.getId()).orElse(currentTask);
+
+        if (finalConsensusScore != null && !finalConsensusScore.isBlank()) {
+            taskToUpdate.setConsensusScore(finalConsensusScore);
+        } else {
+            Map<String, Long> voteCounts = currentVotes.values().stream()
+                    .map(VoteData::getVoteValue)
+                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+            String calculatedConsensus = voteCounts.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("N/A");
+
+            taskToUpdate.setConsensusScore(calculatedConsensus);
         }
+        taskRepository.save(taskToUpdate);
+
         activeTasks.remove(roomId);
         clearAllVotes(roomId);
+        setVotesRevealed(roomId, false);
+
+        if (autoAdvance) {
+            List<Task> pendingTasks = getPendingTasksForRoom(roomId, requesterEmail);
+            if (!pendingTasks.isEmpty()) {
+                return pendingTasks.get(0).getId();
+            }
+        }
+        return null;
     }
 
     @Transactional
@@ -413,29 +441,30 @@ public class RoomService {
         return taskRepository.save(newTask);
     }
 
-@Transactional(readOnly = true)
-public List<Task> getPendingTasksForRoom(String roomId, String requesterEmail) {
-    PokerRoom room = pokerRoomRepository.findById(roomId)
-            .orElseThrow(() -> new RuntimeException("Oda bulunamadı: " + roomId));
-    User requester = userRepository.findByEmail(requesterEmail)
-            .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + requesterEmail));
-    
-    boolean isParticipant = room.getParticipants().stream()
-            .anyMatch(p -> p.getId().equals(requester.getId()));
-    if (!isParticipant) {
-        throw new AccessDeniedException("Bu odanın görevlerini görme yetkiniz yok.");
-    }
+    @Transactional(readOnly = true)
+    public List<Task> getPendingTasksForRoom(String roomId, String requesterEmail) {
+        PokerRoom room = pokerRoomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Oda bulunamadı: " + roomId));
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + requesterEmail));
 
-    List<Task> allTasks = taskRepository.findByPokerRoomId(roomId);
-    
-    return allTasks.stream()
-            .filter(task -> {
-                boolean hasVotes = !task.getVotes().isEmpty() || aiVoteRepository.findByTaskId(task.getId()).isPresent();
-                boolean hasConsensusScore = task.getConsensusScore() != null && !task.getConsensusScore().isEmpty();
-                return !hasVotes && !hasConsensusScore;
-            })
-            .collect(Collectors.toList());
-}
+        boolean isParticipant = room.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(requester.getId()));
+        if (!isParticipant) {
+            throw new AccessDeniedException("Bu odanın görevlerini görme yetkiniz yok.");
+        }
+
+        List<Task> allTasks = taskRepository.findByPokerRoomId(roomId);
+
+        return allTasks.stream()
+                .filter(task -> {
+                    boolean hasVotes = !task.getVotes().isEmpty()
+                            || aiVoteRepository.findByTaskId(task.getId()).isPresent();
+                    boolean hasConsensusScore = task.getConsensusScore() != null && !task.getConsensusScore().isEmpty();
+                    return !hasVotes && !hasConsensusScore;
+                })
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public void setActiveTask(String roomId, Task taskWithProjectId, String requesterEmail) {
@@ -465,34 +494,35 @@ public List<Task> getPendingTasksForRoom(String roomId, String requesterEmail) {
         logger.info("Oda {} için oylama iptal edildi. Oda başlangıç durumuna döndürüldü.", roomId);
     }
 
-@Transactional
-public void skipVoting(String roomId, String requesterEmail) {
-    User requester = userRepository.findByEmail(requesterEmail)
-            .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + requesterEmail));
+    @Transactional
+    public void skipVoting(String roomId, String requesterEmail) {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + requesterEmail));
 
-    Task currentTask = getActiveTask(roomId);
-    if (currentTask == null || currentTask.getId() == null) {
-        throw new IllegalStateException("Atlanacak aktif bir görev bulunamadı.");
+        Task currentTask = getActiveTask(roomId);
+        if (currentTask == null || currentTask.getId() == null) {
+            throw new IllegalStateException("Atlanacak aktif bir görev bulunamadı.");
+        }
+
+        Task taskToUpdate = taskRepository.findById(currentTask.getId())
+                .orElseThrow(
+                        () -> new RuntimeException("Atlanacak görev veritabanında bulunamadı: " + currentTask.getId()));
+
+        User roomOwner = taskToUpdate.getPokerRoom().getOwner();
+
+        if (!roomOwner.getId().equals(requester.getId())) {
+            throw new AccessDeniedException("Sadece oda sahibi oylamayı atlayabilir.");
+        }
+
+        taskToUpdate.setConsensusScore("Atlandı (Oylanmadı)");
+        taskRepository.save(taskToUpdate);
+
+        activeTasks.remove(roomId);
+        clearAllVotes(roomId);
+        setVotesRevealed(roomId, false);
+
+        logger.info("Oda {} için {} ID'li görev moderatör tarafından atlandı.", roomId, currentTask.getId());
     }
-
-    Task taskToUpdate = taskRepository.findById(currentTask.getId())
-            .orElseThrow(() -> new RuntimeException("Atlanacak görev veritabanında bulunamadı: " + currentTask.getId()));
-    
-    User roomOwner = taskToUpdate.getPokerRoom().getOwner();
-
-    if (!roomOwner.getId().equals(requester.getId())) {
-        throw new AccessDeniedException("Sadece oda sahibi oylamayı atlayabilir.");
-    }
-
-    taskToUpdate.setConsensusScore("Atlandı (Oylanmadı)");
-    taskRepository.save(taskToUpdate);
-    
-    activeTasks.remove(roomId);
-    clearAllVotes(roomId);
-    setVotesRevealed(roomId, false);
-    
-    logger.info("Oda {} için {} ID'li görev moderatör tarafından atlandı.", roomId, currentTask.getId());
-}
 
     private void triggerAIEstimation(String roomId, Task task, Long projectId, String requesterEmail) {
         Set<String> participants = rooms.get(roomId);

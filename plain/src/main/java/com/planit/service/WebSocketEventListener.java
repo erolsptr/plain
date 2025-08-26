@@ -1,6 +1,6 @@
 package com.planit.service;
 
-import com.planit.controller.PokerController; // YENİ IMPORT
+import com.planit.controller.PokerController;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -14,7 +14,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 public class WebSocketEventListener {
 
     private final RoomService roomService;
-    private final PokerController pokerController; // YENİ: Controller'ı enjekte et
+    private final PokerController pokerController; 
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
@@ -26,11 +26,8 @@ public class WebSocketEventListener {
         if (username != null && roomId != null) {
             log.info("Kullanıcı bağlantısı kesildi: {}, Oda: {}", username, roomId);
 
-            // RoomService'e kullanıcının odadan ayrıldığını bildir
             roomService.removeUserFromRoom(roomId, username);
 
-            // Controller üzerinden tüm odaya güncel durumu yayınla
-            // Bu, kod tekrarını önler ve tüm yayın mantığını tek bir yerde tutar.
             pokerController.publishFullRoomState(roomId);
         }
     }
