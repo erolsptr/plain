@@ -206,7 +206,6 @@
   border-top: 1px solid var(--border-color);
   padding-top: 15px;
 }
-/* === ODA OLUŞTURMA MODAL STİLLERİ (YENİ) === */
 .create-room-modal {
   display: flex;
   flex-direction: column;
@@ -247,7 +246,7 @@
 /* =================================================================== */
 
 body.light-theme .join-room-form button {
-    background-color: rgba(56, 178, 172, 0.15); /* Turkuazın çok soluk tonu */
+    background-color: rgba(56, 178, 172, 0.15); 
     
     color: var(--primary-color-hover); 
     border: 1px solid rgba(56, 178, 172, 0.3); 
@@ -293,4 +292,29 @@ body.light-theme .action-card button:hover {
     font-weight: 500;
     color: var(--text-color-muted);
     line-height: 1;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+}
+.section-header h3 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    font-size: 1.5rem;
+}
+.section-header .btn-secondary {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    background-color: var(--panel-hover-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.section-header .btn-secondary:hover {
+    background-color: var(--border-color);
 }

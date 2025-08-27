@@ -250,7 +250,15 @@ function DashboardPage({ user }) {
         </div>
 
         <div className="past-rooms-section">
-          <h3>Geçmiş Odalar</h3>
+          <div className="section-header">
+            <h3>Geçmiş Odalar</h3>
+            <button
+              className="btn-secondary"
+              onClick={() => navigate("/reports")}
+            >
+              Raporları Görüntüle
+            </button>
+          </div>
           {isLoading ? (
             <p className="placeholder-text">Odalar yükleniyor...</p>
           ) : rooms.length > 0 ? (

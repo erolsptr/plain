@@ -1,4 +1,4 @@
-# plAIn - Kod Analizi Yapan, Yapay Zeka Destekli Planlama Pokeri
+# plAIn - Kod Analizi ve Raporlama Yapan AI Destekli Planlama Pokeri
 
 ![Proje Durumu: Gelişmiş Özellikler - Stabil](https://img.shields.io/badge/status-advanced%20features-success)
 ![Backend: Java & Spring Boot](https://img.shields.io/badge/backend-Spring%20Boot-green)
@@ -6,15 +6,15 @@
 ![AI: Llama 4 & RAG](https://img.shields.io/badge/ai-Llama%204%20(RAG)-purple)
 ![Veritabanı: PostgreSQL & pgvector](https://img.shields.io/badge/database-PostgreSQL%20%26%20pgvector-blue)
 
-**plAIn**, yazılım geliştirme ekiplerinin görev karmaşıklığını tahmin etme sürecini, **doğrudan projenin kod tabanını analiz eden** bir yapay zeka ile bir üst seviyeye taşıyan, web tabanlı bir planlama pokeri platformudur. Projenin en benzersiz özelliği, oylama oturumlarına katılan ve tahminlerini, o görevle ilgili gerçek kod parçacıklarına dayandıran bir yapay zeka ajanıdır.
+**plAIn**, yazılım geliştirme ekiplerinin görev karmaşıklığını tahmin etme sürecini, **doğrudan projenin kod tabanını analiz eden** ve **detaylı raporlar sunan** bir yapay zeka ile bir üst seviyeye taşıyan, web tabanlı bir planlama pokeri platformudur. Projenin en benzersiz özelliği, oylama oturumlarına katılan ve tahminlerini, o görevle ilgili gerçek kod parçacıklarına dayandıran bir yapay zeka ajanıdır.
 
 ## ✨ Temel Özellikler
 
 -   **Güvenli Kullanıcı Yönetimi:** Kayıt, giriş ve JWT tabanlı oturum yönetimi.
 -   **Kişiselleştirilebilir Profiller ve Temalar:** Kullanıcılar avatarlarını, isimlerini yönetebilir ve Açık/Koyu tema arasında geçiş yapabilir.
--   **Oda Yönetim Paneli:** Kullanıcıların katıldıkları odaları listeleyebildiği, yeni odalar oluşturabildiği ve sahip oldukları odaları silebildiği kişisel bir kontrol paneli.
--   **Gerçek Zamanlı Oylama Odası:** WebSocket tabanlı, anlık etkileşime olanak tanıyan dinamik oylama ortamı. Oylama süresini gösteren bir sayaç ve her katılımcının oy verme süresi gibi detaylar içerir.
--   **Gelişmiş Moderatör Yetkileri:** Oda sahipleri görev ekleyebilir, görevleri silebilir, oylamayı yönetebilir, oylamayı iptal edebilir, sonuçları kaydedebilir ve katılımcıları yönetebilir.
+-   **Oda Yönetim Paneli:** Kullanıcıların katıldıkları odaları listeleyebildiği ve yeni odalar oluşturabildiği kişisel kontrol paneli.
+-   **Gerçek Zamanlı Oylama Odası:** WebSocket tabanlı, anlık etkileşime olanak tanıyan dinamik oylama ortamı. Oylama süresini gösteren bir sayaç içerir.
+-   **Gelişmiş Moderatör Yetkileri:** Oda sahipleri görev ekleyebilir, silebilir, oylamayı başlatabilir, iptal edebilir, atlayabilir, sonuçları kaydedebilir ve katılımcıları yönetebilir.
 
 ## 🚀 Gelişmiş ve Benzersiz Özellikler
 
@@ -25,7 +25,12 @@
 
 -   **Tam Jira Entegrasyonu:**
     -   Kullanıcılar, profil ayarlarından Jira bilgilerini (URL, API Token, Proje Anahtarı, Puan/Saat oranı) güvenli bir şekilde kaydedebilir.
-    -   Oylaması tamamlanan bir görev, tek bir butonla, oylama sonucu (`Story Points`) ve bu puandan hesaplanan saatlik tahmin (`Original Estimate`) ile birlikte doğrudan kullanıcının Jira projesine bir görev olarak gönderilir.
+    -   Tamamlanan görevler, **tek tek veya toplu olarak**, oylama sonucu (`Story Points`) ve hesaplanan saatlik tahmin (`Original Estimate`) ile birlikte doğrudan kullanıcının Jira projesine bir görev olarak gönderilir.
+
+-   **Detaylı Raporlama Paneli (YENİ):**
+    -   Kullanıcılar, sahip oldukları tüm odalardaki oylama geçmişini analiz eden özel bir raporlama sayfasına erişebilir.
+    -   Bu panel, toplam oda sayısı, toplam oylanan görev ve tüm odalardaki toplam story puanı gibi genel özetler sunar.
+    -   Oda bazında, her bir görevin karar oyunu ve oylamaya katılan tüm üyelerin (AI dahil) verdiği bireysel oylar detaylı bir tabloda gösterilir.
 
 ## 🛠️ Teknoloji Yığını ve Mimari
 

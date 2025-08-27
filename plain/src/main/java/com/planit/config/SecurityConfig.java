@@ -6,10 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -29,33 +26,37 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .cors(Customizer.withDefaults())
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/api/internal/**", "/ws-poker/**"))
-        
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/index.html", "/static/**", "/avatars/**", "/*.png", "/*.ico", "/*.json").permitAll()
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/api/internal/**", "/ws-poker/**"))
             
-            .requestMatchers("/api/auth/**", "/api/internal/**").permitAll()
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/index.html", "/static/**", "/avatars/**", "/*.png", "/*.ico", "/*.json").permitAll()
+                
+                .requestMatchers("/api/auth/**", "/api/internal/**").permitAll()
 
-            .requestMatchers("/ws-poker/**").permitAll()
+                .requestMatchers("/ws-poker/**").permitAll()
 
-            //.requestMatchers("/api/**").authenticated()
-
-            .requestMatchers("/api/rooms/**", "/api/profile/**", "/api/room-details/**", "/api/projects/**").authenticated()
-    
-            .anyRequest().authenticated()
-        )
+                .requestMatchers(
+                    "/api/rooms/**", 
+                    "/api/profile/**", 
+                    "/api/room-details/**", 
+                    "/api/projects/**",
+                    "/api/reports/**", 
+                    "/api/tasks/**"    
+                ).authenticated()
         
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authenticationProvider(authenticationProvider)
-        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .anyRequest().authenticated()
+            )
+            
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-    return http.build();
-}
-
+        return http.build();
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
